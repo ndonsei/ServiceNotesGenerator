@@ -64,7 +64,7 @@
       <label for="callStyle">Call Block Wording</label>
       <select id="callStyle">
         <option value="critical">"For critical / Down systems"</option>
-        <option value="always">"Please call (always)"</option>
+        <option value="always">"Please ALWAYS Call"</option>
         <option value="custom">Custom heading...</option>
       </select>
       <input type="text" id="callHeadingCustom" placeholder="Custom call heading..." style="display:none;margin-top:8px">
@@ -107,11 +107,9 @@
       </div>
 
       <div class="actions">
-        <button class="primary" id="generateBtn">Generate</button>
         <button class="ghost" id="copyHtmlBtn">Copy HTML</button>
-        <button class="success" id="copyPreviewBtn">Copy Rendered Block</button>
       </div>
-      <p class="muted">Tip: Use "Copy HTML" if you need the raw snippet, or "Copy Rendered Block" to paste a ready-styled block where HTML is supported.</p>
+      <p class="muted">Tip: The preview updates automatically as you type. Use "Copy HTML" to copy the raw snippet.</p>
     </div>
 
     <!-- Output -->
@@ -207,7 +205,7 @@ function render(){
   const callStyle = document.getElementById('callStyle').value;
   const callHeadingCustom = document.getElementById('callHeadingCustom').value.trim();
   const callHeading = callStyle === 'critical' ? 'For critical / Down systems'
-                    : callStyle === 'always' ? 'Please call (always)'
+                    : callStyle === 'always' ? 'Please ALWAYS Call)'
                     : (callHeadingCustom || 'Contact by Phone');
 
   
@@ -262,9 +260,7 @@ function copyText(text){
   }
 }
 
-document.getElementById('generateBtn').addEventListener('click', render);
 document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
-document.getElementById('copyPreviewBtn').addEventListener('click', ()=> copyText(document.getElementById('preview').innerHTML));
 
 document.getElementById('includeEmail').addEventListener('change', render);
 document.getElementById('includeCall').addEventListener('change', render);
@@ -317,6 +313,13 @@ document.getElementById('addRecipientBtn').addEventListener('click', () => {
 
 // Re-render when any recipient field changes
 document.getElementById('recipientsContainer').addEventListener('input', render);
+
+
+// Auto-render on any input/change across the form
+Array.from(document.querySelectorAll('input, select, textarea')).forEach(el => {
+  el.addEventListener('input', render);
+  el.addEventListener('change', render);
+});
 
 // initial render
 render();
