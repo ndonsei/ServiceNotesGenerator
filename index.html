@@ -154,7 +154,7 @@ function buildSnippet(opts){
   const recipientLinks = validRecipients.map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`).join(' • ');
 
   const emailBlock = includeEmail && validRecipients.length ? `
-  Please email 
+  Please click to email 
   <a 
     href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
     style="color: #006400; text-decoration: none; font-weight: bold;"
