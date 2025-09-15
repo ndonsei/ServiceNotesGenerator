@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoring Notes Snippet Generator</title>
+<style>
+  :root{
+    --bg:#f6f8fa;
+    --card:#ffffff;
+    --text:#111827;
+    --muted:#6b7280;
+    --brand:#0f766e;
+    --accent:#22c55e;
+    --danger:#b30000;
+    --successbg:#e6f9ec;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
+  .wrap{max-width: 980px; margin: 40px auto; padding: 0 16px;}
+  h1{font-size: 22px;margin:0 0 16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px}
+  label{display:block;font-weight:600;margin:10px 0 6px}
+  input[type="text"], input[type="tel"], textarea, select{
+    width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
+  }
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .muted{color:var(--muted);font-size:12px}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#f1f5f9;border-radius:999px}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  button{
+    border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,.08)
+  }
+  .primary{background:var(--brand);color:#fff}
+  .ghost{background:#eef2f7;color:#0f172a}
+  .success{background:var(--accent);color:#053b24}
+  .preview{min-height:140px;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:14px;overflow:auto}
+  .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;font-size:13px;color:#7c2d12}
+  .template{background:#111827;color:#e5e7eb;border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;white-space:pre;overflow:auto}
+  .badge{font-size:12px;border:1px solid #94a3b8;color:#334155;border-radius:999px;padding:2px 8px;background:#f8fafc}
+  .flex{display:flex;gap:12px;align-items:center}
+  .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Monitoring Notes Snippet Generator</h1>
+  <div class="grid">
+    <!-- Form -->
+    <div class="card">
+      <div class="section-title">
+        <strong>Inputs</strong>
+        <span class="badge" id="modeBadge">Mode: Flexible</span>
+      </div>
+      <div class="row">
+        <label class="pill"><input type="checkbox" id="includeEmail" checked> Include Email Block</label>
+        <label class="pill"><input type="checkbox" id="includeCall" checked> Include Call Block</label>
+      </div>
+      <label for="callStyle">Call Block Wording</label>
+      <select id="callStyle">
+        <option value="critical">"For critical / Down systems"</option>
+        <option value="always">"Please call (always)"</option>
+        <option value="custom">Custom heading...</option>
+      </select>
+      <input type="text" id="callHeadingCustom" placeholder="Custom call heading..." style="display:none;margin-top:8px">
+
+      <label for="company">Company Name</label>
+      <input type="text" id="company" placeholder="Example: Acme Corp">
+
+      <label for="emailNames">Email Names (display)</label>
+      <input type="text" id="emailNames" placeholder="e.g., Phillip Fansler &amp; Ashley Stewart">
+
+      <label for="emailRecipients">Recipient Emails (mailto, semicolon separated)</label>
+      <input type="text" id="emailRecipients" placeholder="phf0006@auburn.edu;jas0281@auburn.edu">
+
+      <label for="emailList">Recipient List (plain text)</label>
+      <input type="text" id="emailList" placeholder="phf0006@auburn.edu • jas0281@auburn.edu">
+
+      <div class="row">
+        <div style="flex:1">
+          <label for="primaryName">Primary Name</label>
+          <input type="text" id="primaryName" placeholder="Primary contact name">
+        </div>
+        <div style="flex:1">
+          <label for="primaryPhone">Primary Phone</label>
+          <input type="tel" id="primaryPhone" placeholder="###-###-####">
+        </div>
+      </div>
+
+      <div class="row">
+        <div style="flex:1">
+          <label for="secondaryName">Secondary Name</label>
+          <input type="text" id="secondaryName" placeholder="Secondary contact name">
+        </div>
+        <div style="flex:1">
+          <label for="secondaryPhone">Secondary Phone</label>
+          <input type="tel" id="secondaryPhone" placeholder="###-###-####">
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="generateBtn">Generate</button>
+        <button class="ghost" id="copyHtmlBtn">Copy HTML</button>
+        <button class="success" id="copyPreviewBtn">Copy Rendered Block</button>
+      </div>
+      <p class="muted">Tip: Use "Copy HTML" if you need the raw snippet, or "Copy Rendered Block" to paste a ready-styled block where HTML is supported.</p>
+    </div>
+
+    <!-- Output -->
+    <div class="card">
+      <div class="section-title">
+        <strong>Live Preview</strong>
+        <div class="row">
+          <span class="badge" id="emailState">Email: on</span>
+          <span class="badge" id="callState">Call: on</span>
+        </div>
+      </div>
+      <div id="preview" class="preview">
+        <!-- Rendered preview goes here -->
+      </div>
+      <div style="margin-top:12px">
+        <div class="section-title"><strong>Generated HTML</strong><span class="muted">Read-only</span></div>
+        <pre id="htmlOut" class="template" readonly></pre>
+      </div>
+      <div class="note" style="margin-top:12px">
+        <strong>Heads up:</strong> Semicolons (<code>;</code>) are used between emails in the <em>mailto:</em> link for Outlook. The subject line is URL-encoded. Phones use the <code>tel:</code> format.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function htmlEscape(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
+function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
+
+function buildSnippet(opts){
+  const {
+    company, emailNames, emailRecipients, emailList,
+    includeEmail, includeCall, callHeading,
+    primaryName, primaryPhone, secondaryName, secondaryPhone
+  } = opts;
+
+  const emailBlock = includeEmail ? `
+  Please email 
+  <a 
+    href="mailto:${htmlEscape(emailRecipients)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
+    style="color: #006400; text-decoration: none; font-weight: bold;"
+  >
+    ${htmlEscape(emailNames)}
+  </a>
+  <br>
+  <small>
+    Recipients: ${htmlEscape(emailList)}
+  </small>` : ``;
+
+  const callLines = [];
+  if(primaryName && primaryPhone){
+    callLines.push(`Please call 
+  <a href="tel:${htmlEscape(primaryPhone)}" style="color:#006400; text-decoration:none;">${htmlEscape(primaryName)} — ${htmlEscape(primaryPhone)}</a>`);
+  }
+  if(secondaryName && secondaryPhone){
+    callLines.push(`or 
+  <a href="tel:${htmlEscape(secondaryPhone)}" style="color:#006400; text-decoration:none;">${htmlEscape(secondaryName)} — ${htmlEscape(secondaryPhone)}</a>`);
+  }
+
+  const callBlock = (includeCall && callLines.length) ? `
+  <strong style="color:#b30000;">${htmlEscape(callHeading)}</strong>
+  <br>
+  ${callLines.join('\n  ')}` : ``;
+
+  const inner = `
+  <strong>For all monitoring tickets</strong>
+  <br>
+  ${emailBlock}
+  ${includeEmail && includeCall ? '<br><br>' : ''}
+  ${callBlock}`.trim();
+
+  return `<div style="background-color: #e6f9ec; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
+${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
+</div>`;
+}
+
+function render(){
+  const includeEmail = document.getElementById('includeEmail').checked;
+  const includeCall = document.getElementById('includeCall').checked;
+  const callStyle = document.getElementById('callStyle').value;
+  const callHeadingCustom = document.getElementById('callHeadingCustom').value.trim();
+  const callHeading = callStyle === 'critical' ? 'For critical / Down systems'
+                    : callStyle === 'always' ? 'Please call (always)'
+                    : (callHeadingCustom || 'Contact by Phone');
+
+  const company = document.getElementById('company').value.trim();
+  const emailNames = document.getElementById('emailNames').value.trim();
+  const emailRecipients = document.getElementById('emailRecipients').value.trim();
+  const emailList = document.getElementById('emailList').value.trim();
+  const primaryName = document.getElementById('primaryName').value.trim();
+  const primaryPhone = document.getElementById('primaryPhone').value.trim();
+  const secondaryName = document.getElementById('secondaryName').value.trim();
+  const secondaryPhone = document.getElementById('secondaryPhone').value.trim();
+
+  const html = buildSnippet({
+    company, emailNames, emailRecipients, emailList,
+    includeEmail, includeCall, callHeading,
+    primaryName, primaryPhone, secondaryName, secondaryPhone
+  });
+
+  // Update preview
+  const preview = document.getElementById('preview');
+  preview.innerHTML = html;
+
+  // Update raw HTML
+  document.getElementById('htmlOut').textContent = html;
+
+  // Badges
+  document.getElementById('emailState').textContent = 'Email: ' + (includeEmail ? 'on' : 'off');
+  document.getElementById('callState').textContent = 'Call: ' + (includeCall ? 'on' : 'off');
+  document.getElementById('modeBadge').textContent = 'Mode: ' + (includeEmail && includeCall ? 'Flexible' : includeEmail ? 'Email only' : 'Call only');
+}
+
+function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text);
+  }else{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+}
+
+document.getElementById('generateBtn').addEventListener('click', render);
+document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
+document.getElementById('copyPreviewBtn').addEventListener('click', ()=> copyText(document.getElementById('preview').innerHTML));
+
+document.getElementById('includeEmail').addEventListener('change', render);
+document.getElementById('includeCall').addEventListener('change', render);
+document.getElementById('callStyle').addEventListener('change', (e)=>{
+  const showCustom = e.target.value === 'custom';
+  document.getElementById('callHeadingCustom').style.display = showCustom ? 'block' : 'none';
+  render();
+});
+['company','emailNames','emailRecipients','emailList','primaryName','primaryPhone','secondaryName','secondaryPhone','callHeadingCustom']
+  .forEach(id => document.getElementById(id).addEventListener('input', render));
+
+// initial render
+render();
+</script>
+</body>
+</html>
