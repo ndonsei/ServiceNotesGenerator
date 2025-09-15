@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monitoring Notes Snippet Generator</title>
+<title>Monitoring Notes Generator</title>
 <style>
   :root{
     --bg:#f6f8fa;
@@ -17,15 +17,17 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
-  .wrap{max-width: 980px; margin: 40px auto; padding: 0 16px;}
+  .wrap{max-width: 1440px; margin: 40px auto; padding: 0 16px;}
   h1{font-size: 22px;margin:0 0 16px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px}
+  .grid{display:grid;grid-template-columns:minmax(0, 5fr) minmax(0, 3fr);gap:16px}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16pxmin-width:0;}
   label{display:block;font-weight:600;margin:10px 0 6px}
   input[type="text"], input[type="tel"], textarea, select{
     width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
   }
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .contact-row{margin-bottom:8px}
+  .recipient-row{margin-bottom:8px}
   .muted{color:var(--muted);font-size:12px}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#f1f5f9;border-radius:999px}
   .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
@@ -70,35 +72,38 @@
       <label for="company">Company Name</label>
       <input type="text" id="company" placeholder="Example: Acme Corp">
 
-      <label for="emailNames">Email Names (display)</label>
-      <input type="text" id="emailNames" placeholder="e.g., Phillip Fansler &amp; Ashley Stewart">
-
-      <label for="emailRecipients">Recipient Emails (mailto, semicolon separated)</label>
-      <input type="text" id="emailRecipients" placeholder="phf0006@auburn.edu;jas0281@auburn.edu">
-
-      <label for="emailList">Recipient List (plain text)</label>
-      <input type="text" id="emailList" placeholder="phf0006@auburn.edu • jas0281@auburn.edu">
-
-      <div class="row">
-        <div style="flex:1">
-          <label for="primaryName">Primary Name</label>
-          <input type="text" id="primaryName" placeholder="Primary contact name">
-        </div>
-        <div style="flex:1">
-          <label for="primaryPhone">Primary Phone</label>
-          <input type="tel" id="primaryPhone" placeholder="###-###-####">
+      
+      <label>Email Recipients</label>
+      <div id="recipientsContainer">
+        <div class="row recipient-row">
+          <div style="flex:1">
+            <label>Name</label>
+            <input type="text" class="recipient-name" placeholder="Recipient name (display)">
+          </div>
+          <div style="flex:1">
+            <label>Email</label>
+            <input type="text" class="recipient-email" placeholder="name@example.com">
+          </div>
         </div>
       </div>
-
-      <div class="row">
-        <div style="flex:1">
-          <label for="secondaryName">Secondary Name</label>
-          <input type="text" id="secondaryName" placeholder="Secondary contact name">
+      <div class="actions">
+        <button type="button" class="ghost" id="addRecipientBtn">+ Add recipient</button>
+      </div>
+<label>Call Contacts</label>
+      <div id="contactsContainer">
+        <div class="row contact-row">
+          <div style="flex:1">
+            <label>Name</label>
+            <input type="text" class="contact-name" placeholder="Contact name">
+          </div>
+          <div style="flex:1">
+            <label>Phone</label>
+            <input type="tel" class="contact-phone" placeholder="###-###-####">
+          </div>
         </div>
-        <div style="flex:1">
-          <label for="secondaryPhone">Secondary Phone</label>
-          <input type="tel" id="secondaryPhone" placeholder="###-###-####">
-        </div>
+      </div>
+      <div class="actions">
+        <button type="button" class="ghost" id="addContactBtn">+ Add additional</button>
       </div>
 
       <div class="actions">
@@ -138,32 +143,45 @@ function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
 
 function buildSnippet(opts){
   const {
-    company, emailNames, emailRecipients, emailList,
+    company, recipients,
     includeEmail, includeCall, callHeading,
-    primaryName, primaryPhone, secondaryName, secondaryPhone
+    contacts
   } = opts;
 
-  const emailBlock = includeEmail ? `
+  
+  // Build email names & chain from recipients
+  const validRecipients = Array.isArray(recipients) ? recipients.filter(r => r.name && r.email) : [];
+  const emailNamesStr = validRecipients.map(r => htmlEscape(r.name)).join(' & ');
+  const emailChain = validRecipients.map(r => r.email).join(';');
+  const recipientLinks = validRecipients.map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`).join(' • ');
+
+  const emailBlock = includeEmail && validRecipients.length ? `
   Please email 
   <a 
-    href="mailto:${htmlEscape(emailRecipients)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
+    href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
     style="color: #006400; text-decoration: none; font-weight: bold;"
   >
-    ${htmlEscape(emailNames)}
+    ${emailNamesStr}
   </a>
   <br>
   <small>
-    Recipients: ${htmlEscape(emailList)}
+    Recipients: ${recipientLinks}
   </small>` : ``;
 
+
   const callLines = [];
-  if(primaryName && primaryPhone){
-    callLines.push(`Please call 
-  <a href="tel:${htmlEscape(primaryPhone)}" style="color:#006400; text-decoration:none;">${htmlEscape(primaryName)} — ${htmlEscape(primaryPhone)}</a>`);
-  }
-  if(secondaryName && secondaryPhone){
-    callLines.push(`or 
-  <a href="tel:${htmlEscape(secondaryPhone)}" style="color:#006400; text-decoration:none;">${htmlEscape(secondaryName)} — ${htmlEscape(secondaryPhone)}</a>`);
+  const validContacts = Array.isArray(contacts) ? contacts.filter(c => c.name && c.phone) : [];
+  if(validContacts.length){
+    // First contact uses 'Please call', subsequent use 'or'
+    validContacts.forEach((c, idx) => {
+      if(idx === 0){
+        callLines.push(`Please call 
+  <a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`);
+      }else{
+        callLines.push(`or 
+  <a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`);
+      }
+    });
   }
 
   const callBlock = (includeCall && callLines.length) ? `
@@ -192,19 +210,26 @@ function render(){
                     : callStyle === 'always' ? 'Please call (always)'
                     : (callHeadingCustom || 'Contact by Phone');
 
+  
   const company = document.getElementById('company').value.trim();
-  const emailNames = document.getElementById('emailNames').value.trim();
-  const emailRecipients = document.getElementById('emailRecipients').value.trim();
-  const emailList = document.getElementById('emailList').value.trim();
-  const primaryName = document.getElementById('primaryName').value.trim();
-  const primaryPhone = document.getElementById('primaryPhone').value.trim();
-  const secondaryName = document.getElementById('secondaryName').value.trim();
-  const secondaryPhone = document.getElementById('secondaryPhone').value.trim();
+
+  // Gather recipients
+  const recipients = Array.from(document.querySelectorAll('#recipientsContainer .recipient-row')).map(row => ({
+    name: row.querySelector('.recipient-name')?.value.trim() || '',
+    email: row.querySelector('.recipient-email')?.value.trim() || ''
+  }));
+// Gather contacts
+  const contacts = Array.from(document.querySelectorAll('#contactsContainer .contact-row')).map(row => {
+    return {
+      name: row.querySelector('.contact-name')?.value.trim() || '',
+      phone: row.querySelector('.contact-phone')?.value.trim() || ''
+    };
+  });
 
   const html = buildSnippet({
-    company, emailNames, emailRecipients, emailList,
+    company, recipients,
     includeEmail, includeCall, callHeading,
-    primaryName, primaryPhone, secondaryName, secondaryPhone
+    contacts
   });
 
   // Update preview
@@ -248,8 +273,50 @@ document.getElementById('callStyle').addEventListener('change', (e)=>{
   document.getElementById('callHeadingCustom').style.display = showCustom ? 'block' : 'none';
   render();
 });
-['company','emailNames','emailRecipients','emailList','primaryName','primaryPhone','secondaryName','secondaryPhone','callHeadingCustom']
+['company','callHeadingCustom']
   .forEach(id => document.getElementById(id).addEventListener('input', render));
+
+// Handle adding additional contact rows
+document.getElementById('addContactBtn').addEventListener('click', () => {
+  const container = document.getElementById('contactsContainer');
+  const row = document.createElement('div');
+  row.className = 'row contact-row';
+  row.innerHTML = `
+    <div style="flex:1">
+      <label>Name</label>
+      <input type="text" class="contact-name" placeholder="Contact name">
+    </div>
+    <div style="flex:1">
+      <label>Phone</label>
+      <input type="tel" class="contact-phone" placeholder="###-###-####">
+    </div>`;
+  container.appendChild(row);
+  render();
+});
+
+// Re-render when any contact field changes
+document.getElementById('contactsContainer').addEventListener('input', render);
+
+// Add recipient rows dynamically
+document.getElementById('addRecipientBtn').addEventListener('click', () => {
+  const container = document.getElementById('recipientsContainer');
+  const row = document.createElement('div');
+  row.className = 'row recipient-row';
+  row.innerHTML = `
+    <div style="flex:1">
+      <label>Name</label>
+      <input type="text" class="recipient-name" placeholder="Recipient name (display)">
+    </div>
+    <div style="flex:1">
+      <label>Email</label>
+      <input type="text" class="recipient-email" placeholder="name@example.com">
+    </div>`;
+  container.appendChild(row);
+  render();
+});
+
+// Re-render when any recipient field changes
+document.getElementById('recipientsContainer').addEventListener('input', render);
 
 // initial render
 render();
