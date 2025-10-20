@@ -27,9 +27,7 @@
   }
   textarea{min-height:70px;resize:vertical}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .contact-row,.recipient-row,.text-row{margin-bottom:8px}
   .muted{color:var(--muted);font-size:12px}
-  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#f1f5f9;border-radius:999px}
   .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
   button{
     border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;
@@ -44,7 +42,7 @@
 
   /* Block styling */
   .block{
-    border:2px solid #000;      /* ← clear black border */
+    border:2px solid #000;      /* clear black border */
     border-radius:12px;
     padding:12px;
     margin-top:12px;
@@ -53,15 +51,9 @@
   .block .block-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   .block .block-content{margin-top:10px}
 
-  /* Optional subtle group separation inside a block (not required) */
-  .group{padding:6px 0}
-  .group label.group-title{
-    display:block;
-    font-size:12px;
-    color:#374151;
-    margin-bottom:6px;
-    font-weight:600;
-  }
+  /* Individual entries inside a block-content (preserve order) */
+  .entry{padding:6px 0;border-bottom:1px dashed #e5e7eb}
+  .entry:last-child{border-bottom:0}
 
   @media (max-width:880px){ .grid{grid-template-columns:1fr} }
 </style>
@@ -130,25 +122,65 @@ const HEADER_PRESETS = [
   {value:'custom', label:'Custom Header'}
 ];
 
-function createGroup(container, type){
-  // If group exists, return it. If not, create at current end (preserving order).
-  let group = container.querySelector(`.group[data-type="${type}"]`);
-  if (group) return group;
+function createEntry(type){
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+  entry.dataset.type = type;
 
-  group = document.createElement('div');
-  group.className = 'group';
-  group.dataset.type = type;
+  if(type === 'text'){
+    entry.innerHTML = `
+      <div class="row">
+        <div style="flex:1">
+          <label>Text</label>
+          <textarea class="block-text" placeholder="Custom text..."></textarea>
+        </div>
+        <div>
+          <button type="button" class="ghost remove-item">Remove</button>
+        </div>
+      </div>`;
+  }
 
-  // Optional titles for clarity in the UI (doesn't affect output)
-  let title = '';
-  if(type==='text') title = 'Text';
-  if(type==='phone') title = 'Phone Recipients';
-  if(type==='email') title = 'Email Recipients';
-  if(title) group.innerHTML = `<label class="group-title">${title}</label><div class="group-body"></div>`;
-  else group.innerHTML = `<div class="group-body"></div>`;
+  if(type === 'phone'){
+    entry.innerHTML = `
+      <div class="row">
+        <div style="flex:1">
+          <label>Name</label>
+          <input type="text" class="contact-name" placeholder="Contact name">
+        </div>
+        <div style="flex:1">
+          <label>Phone</label>
+          <input type="tel" class="contact-phone" placeholder="###-###-####">
+        </div>
+        <div>
+          <button type="button" class="ghost remove-item">Remove</button>
+        </div>
+      </div>`;
+  }
 
-  container.appendChild(group);   // ← Appended here, preserving order of first creation
-  return group;
+  if(type === 'email'){
+    entry.innerHTML = `
+      <div class="row">
+        <div style="flex:1">
+          <label>Name</label>
+          <input type="text" class="recipient-name" placeholder="Recipient name (display)">
+        </div>
+        <div style="flex:1">
+          <label>Email</label>
+          <input type="text" class="recipient-email" placeholder="name@example.com">
+        </div>
+        <div>
+          <button type="button" class="ghost remove-item">Remove</button>
+        </div>
+      </div>`;
+  }
+
+  entry.addEventListener('input', render);
+  entry.querySelector('.remove-item').addEventListener('click', ()=>{
+    entry.remove();
+    render();
+  });
+
+  return entry;
 }
 
 function createBlock(){
@@ -174,7 +206,7 @@ function createBlock(){
       <button type="button" class="ghost add-email">+ Add email recipient</button>
     </div>
 
-    <!-- Ordered content lives here in the exact sequence buttons are first used -->
+    <!-- Ordered entries live here in the exact sequence buttons are clicked -->
     <div class="block-content"></div>
   `;
 
@@ -186,93 +218,18 @@ function createBlock(){
   });
   customInp.addEventListener('input', render);
 
-  // Add TEXT
   block.querySelector('.add-text').addEventListener('click', ()=>{
-    const content = block.querySelector('.block-content');
-    const group = createGroup(content, 'text');
-    const body = group.querySelector('.group-body');
-
-    const row = document.createElement('div');
-    row.className = 'row text-row';
-    row.innerHTML = `
-      <div style="flex:1">
-        <label>Text</label>
-        <textarea class="block-text" placeholder="Custom text..."></textarea>
-      </div>
-      <div>
-        <button type="button" class="ghost remove-item">Remove</button>
-      </div>
-    `;
-    row.addEventListener('input', render);
-    row.querySelector('.remove-item').addEventListener('click', ()=>{
-      row.remove();
-      // Auto-remove empty group to keep UI tidy
-      if (!body.children.length) group.remove();
-      render();
-    });
-    body.appendChild(row);
+    block.querySelector('.block-content').appendChild(createEntry('text'));
     render();
   });
 
-  // Add PHONE
   block.querySelector('.add-phone').addEventListener('click', ()=>{
-    const content = block.querySelector('.block-content');
-    const group = createGroup(content, 'phone');
-    const body = group.querySelector('.group-body');
-
-    const row = document.createElement('div');
-    row.className = 'row contact-row';
-    row.innerHTML = `
-      <div style="flex:1">
-        <label>Name</label>
-        <input type="text" class="contact-name" placeholder="Contact name">
-      </div>
-      <div style="flex:1">
-        <label>Phone</label>
-        <input type="tel" class="contact-phone" placeholder="###-###-####">
-      </div>
-      <div>
-        <button type="button" class="ghost remove-item">Remove</button>
-      </div>
-    `;
-    row.addEventListener('input', render);
-    row.querySelector('.remove-item').addEventListener('click', ()=>{
-      row.remove();
-      if (!body.children.length) group.remove();
-      render();
-    });
-    body.appendChild(row);
+    block.querySelector('.block-content').appendChild(createEntry('phone'));
     render();
   });
 
-  // Add EMAIL
   block.querySelector('.add-email').addEventListener('click', ()=>{
-    const content = block.querySelector('.block-content');
-    const group = createGroup(content, 'email');
-    const body = group.querySelector('.group-body');
-
-    const row = document.createElement('div');
-    row.className = 'row recipient-row';
-    row.innerHTML = `
-      <div style="flex:1">
-        <label>Name</label>
-        <input type="text" class="recipient-name" placeholder="Recipient name (display)">
-      </div>
-      <div style="flex:1">
-        <label>Email</label>
-        <input type="text" class="recipient-email" placeholder="name@example.com">
-      </div>
-      <div>
-        <button type="button" class="ghost remove-item">Remove</button>
-      </div>
-    `;
-    row.addEventListener('input', render);
-    row.querySelector('.remove-item').addEventListener('click', ()=>{
-      row.remove();
-      if (!body.children.length) group.remove();
-      render();
-    });
-    body.appendChild(row);
+    block.querySelector('.block-content').appendChild(createEntry('email'));
     render();
   });
 
@@ -292,69 +249,76 @@ function collectBlocks(){
       ? (headerCustom || 'Custom Header')
       : (HEADER_PRESETS.find(h=>h.value===headerVal)?.label || 'Block');
 
-    // Read groups in the exact DOM order
-    const groups = Array.from(b.querySelectorAll('.block-content .group')).map(g=>{
-      const type = g.dataset.type;
-      const body = g.querySelector('.group-body');
-
+    // Entries in exact DOM order
+    const entries = Array.from(b.querySelectorAll('.block-content .entry')).map(e=>{
+      const type = e.dataset.type;
       if(type === 'text'){
-        const texts = Array.from(body.querySelectorAll('.text-row .block-text'))
-          .map(t => (t.value || '').trim())
-          .filter(v => v.length>0);
-        return { type, texts };
+        const v = (e.querySelector('.block-text')?.value || '').trim();
+        return { type, text: v };
       }
-
       if(type === 'phone'){
-        const phones = Array.from(body.querySelectorAll('.contact-row')).map(r=>({
-          name: r.querySelector('.contact-name')?.value.trim() || '',
-          phone: r.querySelector('.contact-phone')?.value.trim() || ''
-        })).filter(x=>x.name && x.phone);
-        return { type, phones };
+        return {
+          type,
+          name: e.querySelector('.contact-name')?.value.trim() || '',
+          phone: e.querySelector('.contact-phone')?.value.trim() || ''
+        };
       }
-
       if(type === 'email'){
-        const recipients = Array.from(body.querySelectorAll('.recipient-row')).map(r=>({
-          name: r.querySelector('.recipient-name')?.value.trim() || '',
-          email: r.querySelector('.recipient-email')?.value.trim() || ''
-        })).filter(x=>x.name && x.email);
-        return { type, recipients };
+        return {
+          type,
+          name: e.querySelector('.recipient-name')?.value.trim() || '',
+          email: e.querySelector('.recipient-email')?.value.trim() || ''
+        };
       }
-
       return { type };
     });
 
-    return { headerText, groups };
+    return { headerText, entries };
   });
 }
 
 function buildBlockHTML(block, company){
-  const { headerText, groups } = block;
+  const { headerText, entries } = block;
+
+  // Gather all emails (for a single combined mailto), and track index of first email entry
+  const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
+  const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
   const parts = [];
 
-  // Header (always first)
+  // Header
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
-  if (groups.length) parts.push('<br>'); // spacer after header if content exists
+  if (entries.length) parts.push('<br>');
 
-  // Render groups in the exact order they appear in the DOM
-  groups.forEach((g, idx) => {
-    if(g.type === 'text' && g.texts?.length){
-      const textHTML = g.texts.map(t => `<div>${htmlEscape(t).replace(/\n/g,'<br>')}</div>`).join('<br>');
-      parts.push(textHTML);
+  let prevRenderedWasPhone = false; // to decide "Please call" vs "or"
+
+  entries.forEach((e, idx) => {
+    // spacing between rendered items (not before the first after header)
+    const isFirstContent = (idx === 0);
+    const willRender =
+      (e.type==='text' && e.text) ||
+      (e.type==='phone' && e.name && e.phone) ||
+      (e.type==='email' && allEmails.length && idx === firstEmailIndex);
+
+    if(!willRender) return;
+
+    if(!isFirstContent) parts.push('<br>');
+
+    if(e.type === 'text'){
+      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
+      prevRenderedWasPhone = false;
     }
 
-    if(g.type === 'phone' && g.phones?.length){
-      const lines = g.phones.map((c, i) => {
-        const prefix = i === 0 ? 'Please call ' : 'or ';
-        return `${prefix}<a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`;
-      }).join('\n');
-      parts.push(lines);
+    if(e.type === 'phone'){
+      const prefix = prevRenderedWasPhone ? 'or ' : 'Please call ';
+      parts.push(`${prefix}<a href="tel:${htmlEscape(e.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(e.name)} — ${htmlEscape(e.phone)}</a>`);
+      prevRenderedWasPhone = true;
     }
 
-    if(g.type === 'email' && g.recipients?.length){
-      const emailNamesStr = g.recipients.map(r => htmlEscape(r.name)).join(' & ');
-      const emailChain = g.recipients.map(r => r.email).join(';');
-      const recipientLinks = g.recipients
+    if(e.type === 'email' && idx === firstEmailIndex){
+      const emailNamesStr = allEmails.map(r => htmlEscape(r.name)).join(' & ');
+      const emailChain = allEmails.map(r => r.email).join(';');
+      const recipientLinks = allEmails
         .map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
         .join(' • ');
       parts.push(
@@ -368,10 +332,8 @@ function buildBlockHTML(block, company){
 <br>
 <small>Recipients: ${recipientLinks}</small>`
       );
+      prevRenderedWasPhone = false;
     }
-
-    // Add a blank line between groups (but not after last)
-    if (idx < groups.length - 1) parts.push('<br>');
   });
 
   return parts.join('\n');
@@ -380,10 +342,8 @@ function buildBlockHTML(block, company){
 function buildSnippet(opts){
   const { company, blocks, integrationSpecialist } = opts;
 
-  // Join blocks with dashed divider
   const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
-  // Footer with Integration Specialist and today's date
   const todayStr = new Date().toLocaleDateString();
   const footer = `
   <div style="margin-top:10px; font-size:12px; color:#555;">
