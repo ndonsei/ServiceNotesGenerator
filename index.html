@@ -25,8 +25,9 @@
   input[type="text"], input[type="tel"], textarea, select{
     width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
   }
+  textarea{min-height:70px;resize:vertical}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .contact-row,.recipient-row{margin-bottom:8px}
+  .contact-row,.recipient-row,.text-row{margin-bottom:8px}
   .muted{color:var(--muted);font-size:12px}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#f1f5f9;border-radius:999px}
   .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
@@ -129,10 +130,12 @@ function createBlock(){
     <div class="block-actions">
       <button type="button" class="ghost add-email">+ Add email recipient</button>
       <button type="button" class="ghost add-phone">+ Add phone recipient</button>
+      <button type="button" class="ghost add-text">+ Add text</button>
     </div>
 
     <div class="block-emails"></div>
     <div class="block-phones" style="margin-top:6px"></div>
+    <div class="block-texts" style="margin-top:6px"></div>
   `;
 
   const headerSel = block.querySelector('.block-header');
@@ -189,6 +192,26 @@ function createBlock(){
     render();
   });
 
+  // NEW: Add Text items
+  block.querySelector('.add-text').addEventListener('click', ()=>{
+    const holder = block.querySelector('.block-texts');
+    const row = document.createElement('div');
+    row.className = 'row text-row';
+    row.innerHTML = `
+      <div style="flex:1">
+        <label>Text</label>
+        <textarea class="block-text" placeholder="Custom text..."></textarea>
+      </div>
+      <div>
+        <button type="button" class="ghost remove-item">Remove</button>
+      </div>
+    `;
+    row.addEventListener('input', render);
+    row.querySelector('.remove-item').addEventListener('click', ()=>{ row.remove(); render(); });
+    holder.appendChild(row);
+    render();
+  });
+
   block.querySelector('.remove-block').addEventListener('click', ()=>{
     block.remove();
     render();
@@ -215,12 +238,17 @@ function collectBlocks(){
       phone: r.querySelector('.contact-phone')?.value.trim() || ''
     })).filter(x=>x.name && x.phone);
 
-    return { headerText, recipients, phones };
+    const texts = Array.from(b.querySelectorAll('.block-texts .text-row')).map(r=>{
+      const val = r.querySelector('.block-text')?.value || '';
+      return val.trim();
+    }).filter(v=>v.length>0);
+
+    return { headerText, recipients, phones, texts };
   });
 }
 
 function buildBlockHTML(block, company){
-  const { headerText, recipients, phones } = block;
+  const { headerText, recipients, phones, texts } = block;
 
   const parts = [];
 
@@ -257,13 +285,20 @@ function buildBlockHTML(block, company){
     parts.push(lines);
   }
 
+  // Text items (each as its own paragraph; preserve newlines)
+  if(texts.length){
+    if(recipients.length || phones.length) parts.push('<br>');
+    const textHTML = texts.map(t => `<div>${htmlEscape(t).replace(/\n/g,'<br>')}</div>`).join('<br>');
+    parts.push(textHTML);
+  }
+
   return parts.join('\n');
 }
 
 function buildSnippet(opts){
   const { company, blocks, integrationSpecialist } = opts;
 
-  // 🔹 Add dashed line break between each block
+  // Add dashed line break between each block
   const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
   // Footer with Integration Specialist and today's date
