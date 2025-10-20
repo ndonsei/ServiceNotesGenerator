@@ -135,7 +135,6 @@ function createBlock(){
     <div class="block-phones" style="margin-top:6px"></div>
   `;
 
-  // Add handlers
   const headerSel = block.querySelector('.block-header');
   const customInp = block.querySelector('.block-header-custom');
   headerSel.addEventListener('change', e=>{
@@ -228,7 +227,7 @@ function buildBlockHTML(block, company){
   // Header
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
 
-  // Emails (mailto combined)
+  // Emails
   if(recipients.length){
     const emailNamesStr = recipients.map(r => htmlEscape(r.name)).join(' & ');
     const emailChain = recipients.map(r => r.email).join(';');
@@ -248,13 +247,12 @@ function buildBlockHTML(block, company){
     );
   }
 
-  // Phones (call lines)
+  // Phones
   if(phones.length){
     const lines = phones.map((c, idx) => {
       const prefix = idx === 0 ? 'Please call ' : 'or ';
       return `${prefix}<a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`;
     }).join('\n');
-    // If both email & phone exist, put a spacer line
     if(recipients.length) parts.push('<br>');
     parts.push(lines);
   }
@@ -265,8 +263,8 @@ function buildBlockHTML(block, company){
 function buildSnippet(opts){
   const { company, blocks, integrationSpecialist } = opts;
 
-  // Build each block
-  const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n\n');
+  // 🔹 Add dashed line break between each block
+  const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
   // Footer with Integration Specialist and today's date
   const todayStr = new Date().toLocaleDateString();
@@ -299,7 +297,6 @@ function render(){
   document.getElementById('preview').innerHTML = html;
   document.getElementById('htmlOut').textContent = html;
 
-  // Badges
   document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length===1?'':'s'}`;
   document.getElementById('modeBadge').textContent = `Blocks: ${blocks.length}`;
 }
@@ -321,25 +318,19 @@ function copyText(text){
   }
 }
 
-// Add Block button
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const container = document.getElementById('blocksContainer');
   container.appendChild(createBlock());
   render();
 });
 
-// Copy HTML
 document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
 
-// Live inputs
 ['company','integrationSpecialist'].forEach(id=>{
   document.getElementById(id).addEventListener('input', render);
 });
 
-// Initial one block for convenience
 document.getElementById('blocksContainer').appendChild(createBlock());
-
-// initial render
 render();
 </script>
 </body>
