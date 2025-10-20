@@ -40,9 +40,9 @@
   .badge{font-size:12px;border:1px solid #94a3b8;color:#334155;border-radius:999px;padding:2px 8px;background:#f8fafc}
   .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 
-  /* Block styling */
+  /* Blocks clearly marked */
   .block{
-    border:2px solid #000;      /* clear black border */
+    border:2px solid #000;
     border-radius:12px;
     padding:12px;
     margin-top:12px;
@@ -51,7 +51,7 @@
   .block .block-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   .block .block-content{margin-top:10px}
 
-  /* Individual entries inside a block-content (preserve order) */
+  /* Ordered entries (exactly as added) */
   .entry{padding:6px 0;border-bottom:1px dashed #e5e7eb}
   .entry:last-child{border-bottom:0}
 
@@ -286,14 +286,8 @@ function buildBlockHTML(block, company){
 
   const parts = [];
 
-  // Header
+  // Header (no auto break after)
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
-  const hasAnyContent = entries.some(e =>
-    (e.type==='text' && e.text) ||
-    (e.type==='phone' && e.name && e.phone) ||
-    (e.type==='email' && allEmails.length && entries.indexOf(e) === firstEmailIndex)
-  );
-  if (hasAnyContent) parts.push('<br>'); // single spacer after header if there will be content
 
   let prevRenderedType = null;
   let renderedCount = 0;
@@ -306,8 +300,124 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-    const isFirstRendered = renderedCount === 0;
+    // PRE-BREAK strategy:
+    // - Break BEFORE text (even if it's the first content after header).
+    // - For non-text, add a break only if something was already rendered AND the previous wasn't text.
+    if(e.type === 'text'){
+      parts.push('<br>');
+    }else{
+      if(renderedCount > 0 && prevRenderedType !== 'text'){
+        parts.push('<br>');
+      }
+    }
 
-    // ===== PRE-BREAK LOGIC (what you asked for) =====
-    // - Insert a break BEFORE text entries (unless they are the very first after header, which already added one).
-    // - For non-text entries: insert pre-break normal
+    // Render entry
+    if(e.type === 'text'){
+      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
+    }
+
+    if(e.type === 'phone'){
+      const prefix = (prevRenderedType === 'phone') ? 'or ' : 'Please call ';
+      parts.push(`${prefix}<a href="tel:${htmlEscape(e.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(e.name)} — ${htmlEscape(e.phone)}</a>`);
+    }
+
+    if(e.type === 'email' && idx === firstEmailIndex){
+      const emailNamesStr = allEmails.map(r => htmlEscape(r.name)).join(' & ');
+      const emailChain = allEmails.map(r => r.email).join(';');
+      const recipientLinks = allEmails
+        .map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
+        .join(' • ');
+      parts.push(
+`Please click to email 
+<a 
+  href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
+  style="color:#006400; text-decoration:none; font-weight:bold;"
+>
+  ${emailNamesStr}
+</a>
+<br>
+<small>Recipients: ${recipientLinks}</small>`
+      );
+    }
+
+    prevRenderedType = e.type;
+    renderedCount += 1;
+  });
+
+  return parts.join('\n');
+}
+
+function buildSnippet(opts){
+  const { company, blocks, integrationSpecialist } = opts;
+
+  const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
+
+  const todayStr = new Date().toLocaleDateString();
+  const footer = `
+  <div style="margin-top:10px; font-size:12px; color:#555;">
+    ~${htmlEscape(integrationSpecialist || '')} - ${htmlEscape(todayStr)}
+  </div>`.trim();
+
+  const inner = blockHTML.trim();
+
+  return `<div style="background-color: #e6f9ec; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
+${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
+  <br>
+  ${footer}
+</div>`;
+}
+
+function render(){
+  const company = document.getElementById('company').value.trim();
+  const integrationSpecialist = document.getElementById('integrationSpecialist').value.trim();
+
+  const blocks = collectBlocks();
+
+  const html = buildSnippet({
+    company,
+    blocks,
+    integrationSpecialist
+  });
+
+  document.getElementById('preview').innerHTML = html;
+  document.getElementById('htmlOut').textContent = html;
+
+  document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length===1?'':'s'}`;
+  document.getElementById('modeBadge').textContent = `Blocks: ${blocks.length}`;
+}
+
+function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text);
+  }else{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top: '-1000px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+}
+
+document.getElementById('addBlockBtn').addEventListener('click', ()=>{
+  const container = document.getElementById('blocksContainer');
+  container.appendChild(createBlock());
+  render();
+});
+
+document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
+
+['company','integrationSpecialist'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', render);
+});
+
+// Start with one empty block
+document.getElementById('blocksContainer').appendChild(createBlock());
+render();
+</script>
+</body>
+</html>
