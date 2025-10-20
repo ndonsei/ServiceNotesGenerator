@@ -26,8 +26,7 @@
     width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
   }
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-  .contact-row{margin-bottom:8px}
-  .recipient-row{margin-bottom:8px}
+  .contact-row,.recipient-row{margin-bottom:8px}
   .muted{color:var(--muted);font-size:12px}
   .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;background:#f1f5f9;border-radius:999px}
   .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
@@ -35,15 +34,14 @@
     border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;
     box-shadow:0 4px 12px rgba(0,0,0,.08)
   }
-  .primary{background:var(--brand);color:#fff}
   .ghost{background:#eef2f7;color:#0f172a}
-  .success{background:var(--accent);color:#053b24}
   .preview{min-height:140px;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:14px;overflow:auto}
   .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;font-size:13px;color:#7c2d12}
   .template{background:#111827;color:#e5e7eb;border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;white-space:pre;overflow:auto}
   .badge{font-size:12px;border:1px solid #94a3b8;color:#334155;border-radius:999px;padding:2px 8px;background:#f8fafc}
-  .flex{display:flex;gap:12px;align-items:center}
   .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .block{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;margin-top:10px}
+  .block .block-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   @media (max-width:880px){ .grid{grid-template-columns:1fr} }
 </style>
 </head>
@@ -55,14 +53,10 @@
     <div class="card">
       <div class="section-title">
         <strong>Inputs</strong>
-        <span class="badge" id="modeBadge">Mode: Flexible</span>
-      </div>
-      <div class="row">
-        <label class="pill"><input type="checkbox" id="includeEmail" checked> Include Email Block</label>
-        <label class="pill"><input type="checkbox" id="includeCall" checked> Include Call Block</label>
+        <span class="badge" id="modeBadge">Blocks: 0</span>
       </div>
 
-      <!-- NEW: Integration Specialist (top-right above Call Block Wording) -->
+      <!-- Integration Specialist (top-right) -->
       <div class="row" style="justify-content:flex-end; width:100%;">
         <div style="max-width:320px; width:100%;">
           <label for="integrationSpecialist">Integration Specialist</label>
@@ -70,50 +64,14 @@
         </div>
       </div>
 
-      <label for="callStyle">Call Block Wording</label>
-      <select id="callStyle">
-        <option value="critical">"For critical / Down systems"</option>
-        <option value="always">"Please ALWAYS Call"</option>
-        <option value="custom">Custom heading...</option>
-      </select>
-      <input type="text" id="callHeadingCustom" placeholder="Custom call heading..." style="display:none;margin-top:8px">
-
       <label for="company">Company Name</label>
       <input type="text" id="company" placeholder="Example: Acme Corp">
 
-      
-      <label>Email Recipients</label>
-      <div id="recipientsContainer">
-        <div class="row recipient-row">
-          <div style="flex:1">
-            <label>Name</label>
-            <input type="text" class="recipient-name" placeholder="Recipient name (display)">
-          </div>
-          <div style="flex:1">
-            <label>Email</label>
-            <input type="text" class="recipient-email" placeholder="name@example.com">
-          </div>
-        </div>
+      <!-- Dynamic Blocks -->
+      <div class="actions" style="margin-top:6px">
+        <button type="button" class="ghost" id="addBlockBtn">+ Add Block</button>
       </div>
-      <div class="actions">
-        <button type="button" class="ghost" id="addRecipientBtn">+ Add recipient</button>
-      </div>
-<label>Call Contacts</label>
-      <div id="contactsContainer">
-        <div class="row contact-row">
-          <div style="flex:1">
-            <label>Name</label>
-            <input type="text" class="contact-name" placeholder="Contact name">
-          </div>
-          <div style="flex:1">
-            <label>Phone</label>
-            <input type="tel" class="contact-phone" placeholder="###-###-####">
-          </div>
-        </div>
-      </div>
-      <div class="actions">
-        <button type="button" class="ghost" id="addContactBtn">+ Add additional</button>
-      </div>
+      <div id="blocksContainer"></div>
 
       <div class="actions">
         <button class="ghost" id="copyHtmlBtn">Copy HTML</button>
@@ -125,14 +83,9 @@
     <div class="card">
       <div class="section-title">
         <strong>Live Preview</strong>
-        <div class="row">
-          <span class="badge" id="emailState">Email: on</span>
-          <span class="badge" id="callState">Call: on</span>
-        </div>
+        <span class="badge" id="blockCountBadge">0 blocks</span>
       </div>
-      <div id="preview" class="preview">
-        <!-- Rendered preview goes here -->
-      </div>
+      <div id="preview" class="preview"></div>
       <div style="margin-top:12px">
         <div class="section-title"><strong>Generated HTML</strong><span class="muted">Read-only</span></div>
         <pre id="htmlOut" class="template" readonly></pre>
@@ -148,68 +101,181 @@
 function htmlEscape(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
 function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
 
-function buildSnippet(opts){
-  const {
-    company, recipients,
-    includeEmail, includeCall, callHeading,
-    contacts,
-    integrationSpecialist
-  } = opts;
+const HEADER_PRESETS = [
+  {value:'all', label:'For all monitoring tickets'},
+  {value:'business', label:'During normal business hours'},
+  {value:'after', label:'After Hours'},
+  {value:'always', label:'Please ALWAYS Call'},
+  {value:'custom', label:'Custom Header'}
+];
 
-  
-  // Build email names & chain from recipients
-  const validRecipients = Array.isArray(recipients) ? recipients.filter(r => r.name && r.email) : [];
-  const emailNamesStr = validRecipients.map(r => htmlEscape(r.name)).join(' & ');
-  const emailChain = validRecipients.map(r => r.email).join(';');
-  const recipientLinks = validRecipients.map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`).join(' • ');
+function createBlock(){
+  const block = document.createElement('div');
+  block.className = 'block';
+  block.innerHTML = `
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label>Block Header</label>
+        <select class="block-header">
+          ${HEADER_PRESETS.map(h=>`<option value="${h.value}">${h.label}</option>`).join('')}
+        </select>
+        <input type="text" class="block-header-custom" placeholder="Custom header..." style="display:none;margin-top:8px">
+      </div>
+      <div style="flex:0">
+        <button type="button" class="ghost remove-block" title="Remove this block">Remove</button>
+      </div>
+    </div>
 
-  const emailBlock = includeEmail && validRecipients.length ? `
-  Please click to email 
-  <a 
-    href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
-    style="color: #006400; text-decoration: none; font-weight: bold;"
-  >
-    ${emailNamesStr}
-  </a>
-  <br>
-  <small>
-    Recipients: ${recipientLinks}
-  </small>` : ``;
+    <div class="block-actions">
+      <button type="button" class="ghost add-email">+ Add email recipient</button>
+      <button type="button" class="ghost add-phone">+ Add phone recipient</button>
+    </div>
 
+    <div class="block-emails"></div>
+    <div class="block-phones" style="margin-top:6px"></div>
+  `;
 
-  const callLines = [];
-  const validContacts = Array.isArray(contacts) ? contacts.filter(c => c.name && c.phone) : [];
-  if(validContacts.length){
-    // First contact uses 'Please call', subsequent use 'or'
-    validContacts.forEach((c, idx) => {
-      if(idx === 0){
-        callLines.push(`Please call 
-  <a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`);
-      }else{
-        callLines.push(`or 
-  <a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`);
-      }
-    });
+  // Add handlers
+  const headerSel = block.querySelector('.block-header');
+  const customInp = block.querySelector('.block-header-custom');
+  headerSel.addEventListener('change', e=>{
+    customInp.style.display = (e.target.value === 'custom') ? 'block' : 'none';
+    render();
+  });
+  customInp.addEventListener('input', render);
+
+  block.querySelector('.add-email').addEventListener('click', ()=>{
+    const holder = block.querySelector('.block-emails');
+    const row = document.createElement('div');
+    row.className = 'row recipient-row';
+    row.innerHTML = `
+      <div style="flex:1">
+        <label>Name</label>
+        <input type="text" class="recipient-name" placeholder="Recipient name (display)">
+      </div>
+      <div style="flex:1">
+        <label>Email</label>
+        <input type="text" class="recipient-email" placeholder="name@example.com">
+      </div>
+      <div>
+        <button type="button" class="ghost remove-item">Remove</button>
+      </div>
+    `;
+    row.addEventListener('input', render);
+    row.querySelector('.remove-item').addEventListener('click', ()=>{ row.remove(); render(); });
+    holder.appendChild(row);
+    render();
+  });
+
+  block.querySelector('.add-phone').addEventListener('click', ()=>{
+    const holder = block.querySelector('.block-phones');
+    const row = document.createElement('div');
+    row.className = 'row contact-row';
+    row.innerHTML = `
+      <div style="flex:1">
+        <label>Name</label>
+        <input type="text" class="contact-name" placeholder="Contact name">
+      </div>
+      <div style="flex:1">
+        <label>Phone</label>
+        <input type="tel" class="contact-phone" placeholder="###-###-####">
+      </div>
+      <div>
+        <button type="button" class="ghost remove-item">Remove</button>
+      </div>
+    `;
+    row.addEventListener('input', render);
+    row.querySelector('.remove-item').addEventListener('click', ()=>{ row.remove(); render(); });
+    holder.appendChild(row);
+    render();
+  });
+
+  block.querySelector('.remove-block').addEventListener('click', ()=>{
+    block.remove();
+    render();
+  });
+
+  return block;
+}
+
+function collectBlocks(){
+  return Array.from(document.querySelectorAll('#blocksContainer .block')).map(b=>{
+    const headerVal = b.querySelector('.block-header').value;
+    const headerCustom = b.querySelector('.block-header-custom').value.trim();
+    const headerText = headerVal === 'custom'
+      ? (headerCustom || 'Custom Header')
+      : (HEADER_PRESETS.find(h=>h.value===headerVal)?.label || 'Block');
+
+    const recipients = Array.from(b.querySelectorAll('.block-emails .recipient-row')).map(r=>({
+      name: r.querySelector('.recipient-name')?.value.trim() || '',
+      email: r.querySelector('.recipient-email')?.value.trim() || ''
+    })).filter(x=>x.name && x.email);
+
+    const phones = Array.from(b.querySelectorAll('.block-phones .contact-row')).map(r=>({
+      name: r.querySelector('.contact-name')?.value.trim() || '',
+      phone: r.querySelector('.contact-phone')?.value.trim() || ''
+    })).filter(x=>x.name && x.phone);
+
+    return { headerText, recipients, phones };
+  });
+}
+
+function buildBlockHTML(block, company){
+  const { headerText, recipients, phones } = block;
+
+  const parts = [];
+
+  // Header
+  parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
+
+  // Emails (mailto combined)
+  if(recipients.length){
+    const emailNamesStr = recipients.map(r => htmlEscape(r.name)).join(' & ');
+    const emailChain = recipients.map(r => r.email).join(';');
+    const recipientLinks = recipients
+      .map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
+      .join(' • ');
+    parts.push(
+`Please click to email 
+<a 
+  href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
+  style="color:#006400; text-decoration:none; font-weight:bold;"
+>
+  ${emailNamesStr}
+</a>
+<br>
+<small>Recipients: ${recipientLinks}</small>`
+    );
   }
 
-  const callBlock = (includeCall && callLines.length) ? `
-  <strong style="color:#b30000;">${htmlEscape(callHeading)}</strong>
-  <br>
-  ${callLines.join('\n  ')}` : ``;
+  // Phones (call lines)
+  if(phones.length){
+    const lines = phones.map((c, idx) => {
+      const prefix = idx === 0 ? 'Please call ' : 'or ';
+      return `${prefix}<a href="tel:${htmlEscape(c.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(c.name)} — ${htmlEscape(c.phone)}</a>`;
+    }).join('\n');
+    // If both email & phone exist, put a spacer line
+    if(recipients.length) parts.push('<br>');
+    parts.push(lines);
+  }
 
-  const inner = `
-  <strong>For all monitoring tickets</strong>
-  <br>
-  ${emailBlock}
-  ${includeEmail && includeCall ? '<br><br>' : ''}
-  ${callBlock}`.trim();
+  return parts.join('\n');
+}
 
-  // NEW: Footer with Integration Specialist and today's date
+function buildSnippet(opts){
+  const { company, blocks, integrationSpecialist } = opts;
+
+  // Build each block
+  const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n\n');
+
+  // Footer with Integration Specialist and today's date
   const todayStr = new Date().toLocaleDateString();
   const footer = `
   <div style="margin-top:10px; font-size:12px; color:#555;">
     ~${htmlEscape(integrationSpecialist || '')} - ${htmlEscape(todayStr)}
   </div>`.trim();
+
+  const inner = blockHTML.trim();
 
   return `<div style="background-color: #e6f9ec; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
 ${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
@@ -219,49 +285,23 @@ ${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
 }
 
 function render(){
-  const includeEmail = document.getElementById('includeEmail').checked;
-  const includeCall = document.getElementById('includeCall').checked;
-  const callStyle = document.getElementById('callStyle').value;
-  const callHeadingCustom = document.getElementById('callHeadingCustom').value.trim();
-  const callHeading = callStyle === 'critical' ? 'For critical / Down systems'
-                    : callStyle === 'always' ? 'Please ALWAYS Call)'
-                    : (callHeadingCustom || 'Contact by Phone');
-
-  
   const company = document.getElementById('company').value.trim();
   const integrationSpecialist = document.getElementById('integrationSpecialist').value.trim();
 
-  // Gather recipients
-  const recipients = Array.from(document.querySelectorAll('#recipientsContainer .recipient-row')).map(row => ({
-    name: row.querySelector('.recipient-name')?.value.trim() || '',
-    email: row.querySelector('.recipient-email')?.value.trim() || ''
-  }));
-// Gather contacts
-  const contacts = Array.from(document.querySelectorAll('#contactsContainer .contact-row')).map(row => {
-    return {
-      name: row.querySelector('.contact-name')?.value.trim() || '',
-      phone: row.querySelector('.contact-phone')?.value.trim() || ''
-    };
-  });
+  const blocks = collectBlocks();
 
   const html = buildSnippet({
-    company, recipients,
-    includeEmail, includeCall, callHeading,
-    contacts,
+    company,
+    blocks,
     integrationSpecialist
   });
 
-  // Update preview
-  const preview = document.getElementById('preview');
-  preview.innerHTML = html;
-
-  // Update raw HTML
+  document.getElementById('preview').innerHTML = html;
   document.getElementById('htmlOut').textContent = html;
 
   // Badges
-  document.getElementById('emailState').textContent = 'Email: ' + (includeEmail ? 'on' : 'off');
-  document.getElementById('callState').textContent = 'Call: ' + (includeCall ? 'on' : 'off');
-  document.getElementById('modeBadge').textContent = 'Mode: ' + (includeEmail && includeCall ? 'Flexible' : includeEmail ? 'Email only' : 'Call only');
+  document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length===1?'':'s'}`;
+  document.getElementById('modeBadge').textContent = `Blocks: ${blocks.length}`;
 }
 
 function copyText(text){
@@ -281,66 +321,23 @@ function copyText(text){
   }
 }
 
+// Add Block button
+document.getElementById('addBlockBtn').addEventListener('click', ()=>{
+  const container = document.getElementById('blocksContainer');
+  container.appendChild(createBlock());
+  render();
+});
+
+// Copy HTML
 document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
 
-document.getElementById('includeEmail').addEventListener('change', render);
-document.getElementById('includeCall').addEventListener('change', render);
-document.getElementById('callStyle').addEventListener('change', (e)=>{
-  const showCustom = e.target.value === 'custom';
-  document.getElementById('callHeadingCustom').style.display = showCustom ? 'block' : 'none';
-  render();
-});
-['company','callHeadingCustom','integrationSpecialist']
-  .forEach(id => document.getElementById(id).addEventListener('input', render));
-
-// Handle adding additional contact rows
-document.getElementById('addContactBtn').addEventListener('click', () => {
-  const container = document.getElementById('contactsContainer');
-  const row = document.createElement('div');
-  row.className = 'row contact-row';
-  row.innerHTML = `
-    <div style="flex:1">
-      <label>Name</label>
-      <input type="text" class="contact-name" placeholder="Contact name">
-    </div>
-    <div style="flex:1">
-      <label>Phone</label>
-      <input type="tel" class="contact-phone" placeholder="###-###-####">
-    </div>`;
-  container.appendChild(row);
-  render();
+// Live inputs
+['company','integrationSpecialist'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', render);
 });
 
-// Re-render when any contact field changes
-document.getElementById('contactsContainer').addEventListener('input', render);
-
-// Add recipient rows dynamically
-document.getElementById('addRecipientBtn').addEventListener('click', () => {
-  const container = document.getElementById('recipientsContainer');
-  const row = document.createElement('div');
-  row.className = 'row recipient-row';
-  row.innerHTML = `
-    <div style="flex:1">
-      <label>Name</label>
-      <input type="text" class="recipient-name" placeholder="Recipient name (display)">
-    </div>
-    <div style="flex:1">
-      <label>Email</label>
-      <input type="text" class="recipient-email" placeholder="name@example.com">
-    </div>`;
-  container.appendChild(row);
-  render();
-});
-
-// Re-render when any recipient field changes
-document.getElementById('recipientsContainer').addEventListener('input', render);
-
-
-// Auto-render on any input/change across the form
-Array.from(document.querySelectorAll('input, select, textarea')).forEach(el => {
-  el.addEventListener('input', render);
-  el.addEventListener('change', render);
-});
+// Initial one block for convenience
+document.getElementById('blocksContainer').appendChild(createBlock());
 
 // initial render
 render();
