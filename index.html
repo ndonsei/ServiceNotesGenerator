@@ -20,7 +20,7 @@
   .wrap{max-width: 1440px; margin: 40px auto; padding: 0 16px;}
   h1{font-size: 22px;margin:0 0 16px}
   .grid{display:grid;grid-template-columns:minmax(0, 5fr) minmax(0, 3fr);gap:16px}
-  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16pxmin-width:0;}
+  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px;min-width:0;}
   label{display:block;font-weight:600;margin:10px 0 6px}
   input[type="text"], input[type="tel"], textarea, select{
     width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
@@ -393,7 +393,7 @@ function copyText(text){
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
-    ta.style.top: '-1000px';
+    ta.style.top = '-1000px'; /* ← FIXED equals sign */
     document.body.appendChild(ta);
     ta.focus();
     ta.select();
