@@ -280,7 +280,7 @@ function collectBlocks(){
 function buildBlockHTML(block, company){
   const { headerText, entries } = block;
 
-  // Gather all emails (for a single combined mailto), and track index of first email entry
+  // Collect all valid emails + index of first email entry (for combined mailto at that spot)
   const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
   const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
@@ -288,13 +288,17 @@ function buildBlockHTML(block, company){
 
   // Header
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
-  if (entries.length) parts.push('<br>');
+  const hasAnyContent = entries.some(e =>
+    (e.type==='text' && e.text) ||
+    (e.type==='phone' && e.name && e.phone) ||
+    (e.type==='email' && allEmails.length && entries.indexOf(e) === firstEmailIndex)
+  );
+  if (hasAnyContent) parts.push('<br>'); // single spacer after header if there will be content
 
-  let prevRenderedWasPhone = false; // to decide "Please call" vs "or"
+  let prevRenderedType = null;
+  let renderedCount = 0;
 
   entries.forEach((e, idx) => {
-    // spacing between rendered items (not before the first after header)
-    const isFirstContent = (idx === 0);
     const willRender =
       (e.type==='text' && e.text) ||
       (e.type==='phone' && e.name && e.phone) ||
@@ -302,114 +306,8 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-    if(!isFirstContent) parts.push('<br>');
+    const isFirstRendered = renderedCount === 0;
 
-    if(e.type === 'text'){
-      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
-      prevRenderedWasPhone = false;
-    }
-
-    if(e.type === 'phone'){
-      const prefix = prevRenderedWasPhone ? 'or ' : 'Please call ';
-      parts.push(`${prefix}<a href="tel:${htmlEscape(e.phone)}" style="color:#006400; text-decoration:none;">${htmlEscape(e.name)} — ${htmlEscape(e.phone)}</a>`);
-      prevRenderedWasPhone = true;
-    }
-
-    if(e.type === 'email' && idx === firstEmailIndex){
-      const emailNamesStr = allEmails.map(r => htmlEscape(r.name)).join(' & ');
-      const emailChain = allEmails.map(r => r.email).join(';');
-      const recipientLinks = allEmails
-        .map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
-        .join(' • ');
-      parts.push(
-`Please click to email 
-<a 
-  href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
-  style="color:#006400; text-decoration:none; font-weight:bold;"
->
-  ${emailNamesStr}
-</a>
-<br>
-<small>Recipients: ${recipientLinks}</small>`
-      );
-      prevRenderedWasPhone = false;
-    }
-  });
-
-  return parts.join('\n');
-}
-
-function buildSnippet(opts){
-  const { company, blocks, integrationSpecialist } = opts;
-
-  const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
-
-  const todayStr = new Date().toLocaleDateString();
-  const footer = `
-  <div style="margin-top:10px; font-size:12px; color:#555;">
-    ~${htmlEscape(integrationSpecialist || '')} - ${htmlEscape(todayStr)}
-  </div>`.trim();
-
-  const inner = blockHTML.trim();
-
-  return `<div style="background-color: #e6f9ec; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
-${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
-  <br>
-  ${footer}
-</div>`;
-}
-
-function render(){
-  const company = document.getElementById('company').value.trim();
-  const integrationSpecialist = document.getElementById('integrationSpecialist').value.trim();
-
-  const blocks = collectBlocks();
-
-  const html = buildSnippet({
-    company,
-    blocks,
-    integrationSpecialist
-  });
-
-  document.getElementById('preview').innerHTML = html;
-  document.getElementById('htmlOut').textContent = html;
-
-  document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length===1?'':'s'}`;
-  document.getElementById('modeBadge').textContent = `Blocks: ${blocks.length}`;
-}
-
-function copyText(text){
-  if(navigator.clipboard && window.isSecureContext){
-    return navigator.clipboard.writeText(text);
-  }else{
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.top = '-1000px';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    try{ document.execCommand('copy'); }catch(e){}
-    document.body.removeChild(ta);
-    return Promise.resolve();
-  }
-}
-
-document.getElementById('addBlockBtn').addEventListener('click', ()=>{
-  const container = document.getElementById('blocksContainer');
-  container.appendChild(createBlock());
-  render();
-});
-
-document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
-
-['company','integrationSpecialist'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', render);
-});
-
-// Start with one empty block
-document.getElementById('blocksContainer').appendChild(createBlock());
-render();
-</script>
-</body>
-</html>
+    // ===== PRE-BREAK LOGIC (what you asked for) =====
+    // - Insert a break BEFORE text entries (unless they are the very first after header, which already added one).
+    // - For non-text entries: insert pre-break normal
