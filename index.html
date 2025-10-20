@@ -192,7 +192,7 @@ function createBlock(){
     render();
   });
 
-  // NEW: Add Text items
+  // Add Text items
   block.querySelector('.add-text').addEventListener('click', ()=>{
     const holder = block.querySelector('.block-texts');
     const row = document.createElement('div');
@@ -254,6 +254,8 @@ function buildBlockHTML(block, company){
 
   // Header
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
+  // ✅ ensure a line break after the header when there is content
+  if (recipients.length || phones.length || texts.length) parts.push('<br>');
 
   // Emails
   if(recipients.length){
@@ -298,7 +300,7 @@ function buildBlockHTML(block, company){
 function buildSnippet(opts){
   const { company, blocks, integrationSpecialist } = opts;
 
-  // Add dashed line break between each block
+  // Dashed line break between each block
   const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
   // Footer with Integration Specialist and today's date
