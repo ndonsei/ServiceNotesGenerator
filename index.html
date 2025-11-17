@@ -478,7 +478,7 @@ function buildSnippet(opts){
     ? '\n' + inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')
     : '';
 
-  return `<!-- -----------------START OF CURRENT NOTE------------------ --!>`
+  return `<!-- -----------------START OF CURRENT NOTE------------------ --!>
   <div style="background-color: ${bgColor}; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
   <strong style="font-size:16px;">${htmlEscape(teamTitle)}</strong><br>${indentedInner}
   <br>
