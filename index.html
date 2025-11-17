@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monitoring Notes Generator</title>
+<title>Service Notes Generator</title>
 <style>
   :root{
     --bg:#f6f8fa;
@@ -60,7 +60,14 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Monitoring Service Notes Generator</h1>
+
+  <!-- Service Express Logo -->
+  <div style="text-align:left; margin-bottom:15px;">
+    <img src="https://serviceexpress.com/wp-content/themes/serviceexpress/dist/svg/logo-main.svg" 
+         alt="Service Express Logo" 
+         style="height:50px;">
+  </div>
+  <h1>Service Notes Generator</h1>
   <div class="grid">
     <!-- Form -->
     <div class="card">
@@ -69,16 +76,35 @@
         <span class="badge" id="modeBadge">Blocks: 0</span>
       </div>
 
-      <!-- Integration Specialist (top-right) -->
+      <!-- Team selector radios -->
+      <div class="row" style="margin-bottom:8px;">
+        <label style="font-weight:600;margin:0;">Team:</label>
+        <label style="display:inline-flex;align-items:center;gap:4px;margin:0;">
+          <input type="radio" name="teamType" value="monitoring" checked>
+          Monitoring
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:4px;margin:0;">
+          <input type="radio" name="teamType" value="service">
+          Service Team
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:4px;margin:0;">
+          <input type="radio" name="teamType" value="global">
+          Global Service
+        </label>
+      </div>
+
+      <!-- Employee Name -->
       <div class="row" style="justify-content:flex-end; width:100%;">
         <div style="max-width:320px; width:100%;">
-          <label for="integrationSpecialist">Integration Specialist</label>
-          <input type="text" id="integrationSpecialist" placeholder="Name">
+          <label for="employeeName">Employee Name <span style="color:#b30000;font-size:12px;">*required</span></label>
+
+          <input type="text" id="employeeName" placeholder="Name">
         </div>
       </div>
 
-      <label for="company">Company Name</label>
-      <input type="text" id="company" placeholder="Required for email subject line">
+      <label for="company">Company Name <span style="color:#b30000;font-size:12px;">*required</span></label>
+
+      <input type="text" id="company" placeholder="Example: Acme Corp">
 
       <!-- Dynamic Blocks -->
       <div class="actions" style="margin-top:6px">
@@ -114,13 +140,37 @@
 function htmlEscape(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
 function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
 
-const HEADER_PRESETS = [
-  {value:'all', label:'For all monitoring tickets'},
-  {value:'business', label:'During normal business hours'},
-  {value:'after', label:'After Hours'},
-  {value:'always', label:'Please ALWAYS Call'},
-  {value:'custom', label:'Custom Header'}
-];
+// Team-specific header presets (Custom Header always first)
+const TEAM_HEADER_PRESETS = {
+  monitoring: [
+    {value:'custom',   label:'Custom Header'},
+    {value:'all',      label:'For all monitoring tickets'},
+    {value:'business', label:'During normal business hours'},
+    {value:'after',    label:'After Hours'},
+    {value:'always',   label:'Please ALWAYS Call'}
+  ],
+  service: [
+    {value:'custom',      label:'Custom Header'},
+    {value:'svc_all',     label:'For all service tickets'},
+    {value:'svc_sched',   label:'For scheduled service only'},
+    {value:'svc_after',   label:'After-hours service only'}
+  ],
+  global: [
+    {value:'custom',       label:'Custom Header'},
+    {value:'glob_all',     label:'For all global requests'},
+    {value:'glob_business',label:'During normal business hours (Global)'},
+    {value:'glob_after',   label:'After-hours global support'}
+  ]
+};
+
+function getSelectedTeam(){
+  const el = document.querySelector('input[name="teamType"]:checked');
+  return el ? el.value : 'monitoring';
+}
+
+function getTeamHeaderPresets(team){
+  return TEAM_HEADER_PRESETS[team] || TEAM_HEADER_PRESETS.monitoring;
+}
 
 function createEntry(type){
   const entry = document.createElement('div');
@@ -183,6 +233,23 @@ function createEntry(type){
   return entry;
 }
 
+function populateHeadersForBlock(block, keepPrev){
+  const team = getSelectedTeam();
+  const presets = getTeamHeaderPresets(team);
+  const select = block.querySelector('.block-header');
+  const customInp = block.querySelector('.block-header-custom');
+  const prevVal = (typeof keepPrev === 'string') ? keepPrev : select.value;
+
+  select.innerHTML = presets.map(h=>`<option value="${h.value}">${h.label}</option>`).join('');
+
+  let selectedVal = 'custom';
+  if (presets.some(h=>h.value === prevVal)) {
+    selectedVal = prevVal;
+  }
+  select.value = selectedVal;
+  customInp.style.display = (select.value === 'custom') ? 'block' : 'none';
+}
+
 function createBlock(){
   const block = document.createElement('div');
   block.className = 'block';
@@ -190,9 +257,7 @@ function createBlock(){
     <div class="row">
       <div style="flex:1;min-width:220px">
         <label>Block Header</label>
-        <select class="block-header">
-          ${HEADER_PRESETS.map(h=>`<option value="${h.value}">${h.label}</option>`).join('')}
-        </select>
+        <select class="block-header"></select>
         <input type="text" class="block-header-custom" placeholder="Custom header..." style="display:none;margin-top:8px">
       </div>
       <div style="flex:0">
@@ -212,6 +277,10 @@ function createBlock(){
 
   const headerSel = block.querySelector('.block-header');
   const customInp = block.querySelector('.block-header-custom');
+
+  // Populate headers based on current team (Custom Header default)
+  populateHeadersForBlock(block);
+
   headerSel.addEventListener('change', e=>{
     customInp.style.display = (e.target.value === 'custom') ? 'block' : 'none';
     render();
@@ -241,13 +310,51 @@ function createBlock(){
   return block;
 }
 
+function updateAllBlockHeaders(){
+  const blocks = document.querySelectorAll('#blocksContainer .block');
+  blocks.forEach(block=>{
+    const select = block.querySelector('.block-header');
+    const prevVal = select ? select.value : 'custom';
+    populateHeadersForBlock(block, prevVal);
+  });
+  render();
+}
+
+// lock/unlock headers until Employee Name + Company filled
+function updateHeaderAvailability() {
+  const employee = document.getElementById('employeeName').value.trim();
+  const company = document.getElementById('company').value.trim();
+  const enabled = (employee.length > 0 && company.length > 0);
+
+  document.querySelectorAll('#blocksContainer .block').forEach(block => {
+    const header = block.querySelector('.block-header');
+    const custom = block.querySelector('.block-header-custom');
+
+    if (!header || !custom) return;
+
+    header.disabled = !enabled;
+    custom.disabled = !enabled;
+
+    header.style.opacity = enabled ? 1 : 0.5;
+    custom.style.opacity = enabled ? 1 : 0.5;
+  });
+}
+
 function collectBlocks(){
+  const team = getSelectedTeam();
+  const presets = getTeamHeaderPresets(team);
+
   return Array.from(document.querySelectorAll('#blocksContainer .block')).map(b=>{
     const headerVal = b.querySelector('.block-header').value;
     const headerCustom = b.querySelector('.block-header-custom').value.trim();
-    const headerText = headerVal === 'custom'
-      ? (headerCustom || 'Custom Header')
-      : (HEADER_PRESETS.find(h=>h.value===headerVal)?.label || 'Block');
+
+    let headerText;
+    if (headerVal === 'custom') {
+      headerText = headerCustom || 'Custom Header';
+    } else {
+      const preset = presets.find(h=>h.value === headerVal);
+      headerText = preset ? preset.label : 'Block';
+    }
 
     // Entries in exact DOM order
     const entries = Array.from(b.querySelectorAll('.block-content .entry')).map(e=>{
@@ -280,13 +387,11 @@ function collectBlocks(){
 function buildBlockHTML(block, company){
   const { headerText, entries } = block;
 
-  // Collect all valid emails + index of first email entry (for combined mailto at that spot)
   const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
   const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
   const parts = [];
 
-  // Header (no auto break after)
   parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong>`);
 
   let prevRenderedType = null;
@@ -300,9 +405,6 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-    // PRE-BREAK strategy:
-    // - Break BEFORE text (even if it's the first content after header).
-    // - For non-text, add a break only if something was already rendered AND the previous wasn't text.
     if(e.type === 'text'){
       parts.push('<br>');
     }else{
@@ -311,7 +413,6 @@ function buildBlockHTML(block, company){
       }
     }
 
-    // Render entry
     if(e.type === 'text'){
       parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
     }
@@ -347,36 +448,56 @@ function buildBlockHTML(block, company){
   return parts.join('\n');
 }
 
+function getTeamBackground(team){
+  if(team === 'service') return '#e0f2ff';
+  if(team === 'global') return '#fdf3d0';
+  return '#e6f9ec';
+}
+
+function getTeamTitle(team){
+  if(team === 'service') return 'Service Team Notes';
+  if(team === 'global') return 'Global Service Notes';
+  return 'Monitoring Notes';
+}
+
 function buildSnippet(opts){
-  const { company, blocks, integrationSpecialist } = opts;
+  const { company, blocks, employeeName, team } = opts;
 
   const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
   const todayStr = new Date().toLocaleDateString();
   const footer = `
   <div style="margin-top:10px; font-size:12px; color:#555;">
-    ~${htmlEscape(integrationSpecialist || '')} - ${htmlEscape(todayStr)}
+    ~${htmlEscape(employeeName || '')} - ${htmlEscape(todayStr)}
   </div>`.trim();
 
   const inner = blockHTML.trim();
+  const bgColor = getTeamBackground(team);
+  const teamTitle = getTeamTitle(team);
+  const indentedInner = inner
+    ? '\n' + inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')
+    : '';
 
-  return `<div style="background-color: #e6f9ec; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
-${inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')}
+  return `<div style="background-color: ${bgColor}; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
+  <strong style="font-size:16px;">${htmlEscape(teamTitle)}</strong><br>${indentedInner}
   <br>
   ${footer}
-</div>`;
+</div>
+<!-- -----------------END OF CURRENT NOTE------------------ -->`;
 }
 
 function render(){
   const company = document.getElementById('company').value.trim();
-  const integrationSpecialist = document.getElementById('integrationSpecialist').value.trim();
+  const employeeName = document.getElementById('employeeName').value.trim();
+  const team = getSelectedTeam();
 
   const blocks = collectBlocks();
 
   const html = buildSnippet({
     company,
     blocks,
-    integrationSpecialist
+    employeeName,
+    team
   });
 
   document.getElementById('preview').innerHTML = html;
@@ -393,7 +514,7 @@ function copyText(text){
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
-    ta.style.top = '-1000px'; /* ← FIXED equals sign */
+    ta.style.top = '-1000px';
     document.body.appendChild(ta);
     ta.focus();
     ta.select();
@@ -405,19 +526,38 @@ function copyText(text){
 
 document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   const container = document.getElementById('blocksContainer');
-  container.appendChild(createBlock());
+  const block = createBlock();
+  container.appendChild(block);
+  updateHeaderAvailability();
   render();
 });
 
 document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
 
-['company','integrationSpecialist'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', render);
+// Employee + Company input: lock/unlock headers + re-render
+['company','employeeName'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', () => {
+    updateHeaderAvailability();
+    render();
+  });
+});
+
+// Team radio change -> update headers + re-render + re-apply locking
+document.querySelectorAll('input[name="teamType"]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    updateAllBlockHeaders();
+    updateHeaderAvailability();
+  });
 });
 
 // Start with one empty block
-document.getElementById('blocksContainer').appendChild(createBlock());
-render();
+(function init(){
+  const container = document.getElementById('blocksContainer');
+  const block = createBlock();
+  container.appendChild(block);
+  updateHeaderAvailability();
+  render();
+})();
 </script>
 </body>
 </html>
