@@ -28,7 +28,7 @@
   textarea{min-height:70px;resize:vertical}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .muted{color:var(--muted);font-size:12px}
-  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;align-items:center}
   button{
     border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;
     box-shadow:0 4px 12px rgba(0,0,0,.08)
@@ -97,13 +97,11 @@
       <div class="row" style="justify-content:flex-end; width:100%;">
         <div style="max-width:320px; width:100%;">
           <label for="employeeName">Employee Name <span style="color:#b30000;font-size:12px;">*required</span></label>
-
           <input type="text" id="employeeName" placeholder="Name">
         </div>
       </div>
 
       <label for="company">Customer's Company Name <span style="color:#b30000;font-size:12px;">*required</span></label>
-
       <input type="text" id="company" placeholder="Example: Acme Corp (required for email subject)">
 
       <!-- Dynamic Blocks -->
@@ -114,6 +112,8 @@
 
       <div class="actions">
         <button class="ghost" id="copyHtmlBtn">Copy HTML</button>
+        <span class="muted">Please paste HTML text into Trakker service notes.</span>
+        <span id="copyStatus" class="muted" style="color:#16a34a;"></span>
       </div>
       <p class="muted">Tip: The preview updates automatically as you type. Use "Copy HTML" to copy the raw snippet.</p>
     </div>
@@ -533,7 +533,19 @@ document.getElementById('addBlockBtn').addEventListener('click', ()=>{
   render();
 });
 
-document.getElementById('copyHtmlBtn').addEventListener('click', ()=> copyText(document.getElementById('htmlOut').textContent));
+document.getElementById('copyHtmlBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('htmlOut').textContent;
+  copyText(text).then(()=>{
+    const statusEl = document.getElementById('copyStatus');
+    if(statusEl){
+      statusEl.textContent = 'Copied to clipboard';
+      clearTimeout(window._copyStatusTimeout);
+      window._copyStatusTimeout = setTimeout(()=>{
+        statusEl.textContent = '';
+      }, 2000);
+    }
+  });
+});
 
 // Employee + Company input: lock/unlock headers + re-render
 ['company','employeeName'].forEach(id=>{
