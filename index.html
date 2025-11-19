@@ -110,6 +110,14 @@
       </div>
       <div id="blocksContainer"></div>
 
+      <!-- Force expand toggle -->
+      <div class="actions" style="margin-top:6px">
+        <label style="display:inline-flex;align-items:center;gap:6px;margin:0;">
+          <input type="checkbox" id="forceExpandNotes">
+          <span class="muted">Force expand service notes (no scrolling)</span>
+        </label>
+      </div>
+
       <div class="actions">
         <button class="ghost" id="copyHtmlBtn">Copy HTML</button>
         <span class="muted">Please paste HTML text into Trakker service notes.</span>
@@ -461,7 +469,7 @@ function getTeamTitle(team){
 }
 
 function buildSnippet(opts){
-  const { company, blocks, employeeName, team } = opts;
+  const { company, blocks, employeeName, team, forceExpand } = opts;
 
   const blockHTML = blocks.map(b => buildBlockHTML(b, company)).join('\n<hr style="border:1px dashed #ccc; margin:12px 0;">\n');
 
@@ -478,7 +486,13 @@ function buildSnippet(opts){
     ? '\n' + inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')
     : '';
 
+  // Trakker-safe one-line style when forcing expand
+  const expandStyle = forceExpand
+    ? `<style>#noteInformation{max-height:none !important;height:auto !important;overflow:visible !important;}</style>`
+    : '';
+
   return `<!-- -----------------START OF CURRENT NOTE------------------ --!>
+${expandStyle}
   <div style="background-color: ${bgColor}; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
   <strong style="font-size:16px;">${htmlEscape(teamTitle)}</strong><br>${indentedInner}
   <br>
@@ -491,6 +505,7 @@ function render(){
   const company = document.getElementById('company').value.trim();
   const employeeName = document.getElementById('employeeName').value.trim();
   const team = getSelectedTeam();
+  const forceExpand = document.getElementById('forceExpandNotes').checked;
 
   const blocks = collectBlocks();
 
@@ -498,7 +513,8 @@ function render(){
     company,
     blocks,
     employeeName,
-    team
+    team,
+    forceExpand
   });
 
   document.getElementById('preview').innerHTML = html;
@@ -562,6 +578,9 @@ document.querySelectorAll('input[name="teamType"]').forEach(r=>{
     updateHeaderAvailability();
   });
 });
+
+// Force expand checkbox change -> re-render
+document.getElementById('forceExpandNotes').addEventListener('change', render);
 
 // Start with one empty block
 (function init(){
