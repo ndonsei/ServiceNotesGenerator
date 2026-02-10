@@ -55,25 +55,6 @@
   .entry{padding:6px 0;border-bottom:1px dashed #e5e7eb}
   .entry:last-child{border-bottom:0}
 
-  /* Tiny checkbox rows under remove buttons */
-  .format-toggles{
-    margin-top:8px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    align-items:flex-start;
-  }
-  .format-toggles label{
-    margin:0;
-    font-weight:600;
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    font-size:12px;
-    color:#0f172a;
-  }
-  .format-toggles input{ transform: translateY(1px); }
-
   @media (max-width:880px){ .grid{grid-template-columns:1fr} }
 </style>
 </head>
@@ -87,10 +68,11 @@
          style="height:50px;">
   </div>
 
-  <h1>Service Notes Generator
-  <span style="font-size:12px; color:#6b7280; font-weight:400; margin-left:8px;">
-    Created by Nick Donegon
-  </span></h1>
+  <div style="display:flex;align-items:baseline;gap:10px;">
+    <h1 style="margin:0;">Service Notes Generator</h1>
+    <span class="muted" style="font-size:12px;">by Nick Donegon</span>
+  </div>
+  <div style="height:16px;"></div>
 
   <div class="grid">
     <!-- Form -->
@@ -169,7 +151,7 @@
 </div>
 
 <script>
-function htmlEscape(s){return s.replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
+function htmlEscape(s){return (s||'').replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
 function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
 
 // Team-specific header presets (Custom Header always first)
@@ -199,7 +181,6 @@ function getSelectedTeam(){
   const el = document.querySelector('input[name="teamType"]:checked');
   return el ? el.value : 'monitoring';
 }
-
 function getTeamHeaderPresets(team){
   return TEAM_HEADER_PRESETS[team] || TEAM_HEADER_PRESETS.monitoring;
 }
@@ -216,14 +197,8 @@ function createEntry(type){
           <label>Text</label>
           <textarea class="block-text" placeholder="Custom text..."></textarea>
         </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-start;">
+        <div>
           <button type="button" class="ghost remove-item">Remove</button>
-
-          <!-- NEW: Text formatting toggles (below Remove) -->
-          <div class="format-toggles">
-            <label><input type="checkbox" class="text-bold"> Bold</label>
-            <label><input type="checkbox" class="text-underline"> Underline</label>
-          </div>
         </div>
       </div>`;
   }
@@ -263,8 +238,6 @@ function createEntry(type){
   }
 
   entry.addEventListener('input', render);
-  entry.addEventListener('change', render);
-
   entry.querySelector('.remove-item').addEventListener('click', ()=>{
     entry.remove();
     render();
@@ -278,14 +251,13 @@ function populateHeadersForBlock(block, keepPrev){
   const presets = getTeamHeaderPresets(team);
   const select = block.querySelector('.block-header');
   const customInp = block.querySelector('.block-header-custom');
-  const prevVal = (typeof keepPrev === 'string') ? keepPrev : select.value;
+  const prevVal = (typeof keepPrev === 'string') ? keepPrev : (select ? select.value : 'custom');
 
   select.innerHTML = presets.map(h=>`<option value="${h.value}">${h.label}</option>`).join('');
 
   let selectedVal = 'custom';
-  if (presets.some(h=>h.value === prevVal)) {
-    selectedVal = prevVal;
-  }
+  if (presets.some(h=>h.value === prevVal)) selectedVal = prevVal;
+
   select.value = selectedVal;
   customInp.style.display = (select.value === 'custom') ? 'block' : 'none';
 }
@@ -300,15 +272,8 @@ function createBlock(){
         <select class="block-header"></select>
         <input type="text" class="block-header-custom" placeholder="Custom header..." style="display:none;margin-top:8px">
       </div>
-
-      <div style="flex:0; display:flex; flex-direction:column; align-items:flex-start;">
+      <div style="flex:0">
         <button type="button" class="ghost remove-block" title="Remove this block">Remove</button>
-
-        <!-- NEW: Header formatting toggles (below Remove) -->
-        <div class="format-toggles">
-          <label><input type="checkbox" class="header-bold" checked> Bold</label>
-          <label><input type="checkbox" class="header-underline"> Underline</label>
-        </div>
       </div>
     </div>
 
@@ -318,14 +283,25 @@ function createBlock(){
       <button type="button" class="ghost add-email">+ Add email recipient</button>
     </div>
 
-    <!-- Ordered entries live here in the exact sequence buttons are clicked -->
+    <!-- Email Group Name (shows only when 2+ email entries exist in this block) -->
+    <div class="email-group-row" style="display:none; margin-top:10px;">
+      <label style="margin-top:0;">Email Group Name <span class="muted" style="font-weight:400;">(optional)</span></label>
+      <input type="text" class="email-group-name" placeholder="Example: IT Group">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;">
+        <input type="checkbox" class="recipient-names-only">
+        <span class="muted">List recipient names instead of email</span>
+      </label>
+      <div class="muted" style="margin-top:4px;">
+        Shows as the clickable email text instead of listing each name.
+      </div>
+    </div>
+
     <div class="block-content"></div>
   `;
 
   const headerSel = block.querySelector('.block-header');
   const customInp = block.querySelector('.block-header-custom');
 
-  // Populate headers based on current team (Custom Header default)
   populateHeadersForBlock(block);
 
   headerSel.addEventListener('change', e=>{
@@ -334,9 +310,11 @@ function createBlock(){
   });
   customInp.addEventListener('input', render);
 
-  // NEW: header style toggles
-  block.querySelector('.header-bold').addEventListener('change', render);
-  block.querySelector('.header-underline').addEventListener('change', render);
+  // ✅ Correct place for these listeners
+  const groupNameInput = block.querySelector('.email-group-name');
+  const namesOnlyCheckbox = block.querySelector('.recipient-names-only');
+  if(groupNameInput) groupNameInput.addEventListener('input', render);
+  if(namesOnlyCheckbox) namesOnlyCheckbox.addEventListener('change', render);
 
   block.querySelector('.add-text').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('text'));
@@ -362,8 +340,7 @@ function createBlock(){
 }
 
 function updateAllBlockHeaders(){
-  const blocks = document.querySelectorAll('#blocksContainer .block');
-  blocks.forEach(block=>{
+  document.querySelectorAll('#blocksContainer .block').forEach(block=>{
     const select = block.querySelector('.block-header');
     const prevVal = select ? select.value : 'custom';
     populateHeadersForBlock(block, prevVal);
@@ -380,23 +357,23 @@ function updateHeaderAvailability() {
   document.querySelectorAll('#blocksContainer .block').forEach(block => {
     const header = block.querySelector('.block-header');
     const custom = block.querySelector('.block-header-custom');
-    const hb = block.querySelector('.header-bold');
-    const hu = block.querySelector('.header-underline');
-
     if (!header || !custom) return;
 
     header.disabled = !enabled;
     custom.disabled = !enabled;
 
-    // NEW: disable header bold/underline while locked
-    if(hb) hb.disabled = !enabled;
-    if(hu) hu.disabled = !enabled;
-
     header.style.opacity = enabled ? 1 : 0.5;
     custom.style.opacity = enabled ? 1 : 0.5;
+  });
+}
 
-    if(hb) hb.parentElement.style.opacity = enabled ? 1 : 0.5;
-    if(hu) hu.parentElement.style.opacity = enabled ? 1 : 0.5;
+/* show Email Group Name only if block has 2+ email entries */
+function updateEmailGroupVisibility(){
+  document.querySelectorAll('#blocksContainer .block').forEach(block=>{
+    const emailEntries = block.querySelectorAll('.block-content .entry[data-type="email"]');
+    const row = block.querySelector('.email-group-row');
+    if(!row) return;
+    row.style.display = (emailEntries.length >= 2) ? 'block' : 'none';
   });
 }
 
@@ -405,11 +382,8 @@ function collectBlocks(){
   const presets = getTeamHeaderPresets(team);
 
   return Array.from(document.querySelectorAll('#blocksContainer .block')).map(b=>{
-    const headerVal = b.querySelector('.block-header').value;
-    const headerCustom = b.querySelector('.block-header-custom').value.trim();
-
-    const headerBold = !!b.querySelector('.header-bold')?.checked;
-    const headerUnderline = !!b.querySelector('.header-underline')?.checked;
+    const headerVal = b.querySelector('.block-header')?.value || 'custom';
+    const headerCustom = (b.querySelector('.block-header-custom')?.value || '').trim();
 
     let headerText;
     if (headerVal === 'custom') {
@@ -419,17 +393,15 @@ function collectBlocks(){
       headerText = preset ? preset.label : 'Block';
     }
 
-    // Entries in exact DOM order
+    const emailGroupName = (b.querySelector('.email-group-name')?.value || '').trim();
+    const recipientNamesOnly = b.querySelector('.recipient-names-only')?.checked || false;
+
     const entries = Array.from(b.querySelectorAll('.block-content .entry')).map(e=>{
       const type = e.dataset.type;
-
       if(type === 'text'){
         const v = (e.querySelector('.block-text')?.value || '').trim();
-        const bold = !!e.querySelector('.text-bold')?.checked;
-        const underline = !!e.querySelector('.text-underline')?.checked;
-        return { type, text: v, bold, underline };
+        return { type, text: v };
       }
-
       if(type === 'phone'){
         return {
           type,
@@ -437,7 +409,6 @@ function collectBlocks(){
           phone: e.querySelector('.contact-phone')?.value.trim() || ''
         };
       }
-
       if(type === 'email'){
         return {
           type,
@@ -445,29 +416,21 @@ function collectBlocks(){
           email: e.querySelector('.recipient-email')?.value.trim() || ''
         };
       }
-
       return { type };
     });
 
-    return { headerText, headerBold, headerUnderline, entries };
+    return { headerText, entries, emailGroupName, recipientNamesOnly };
   });
 }
 
 function buildBlockHTML(block, company){
-  const { headerText, headerBold, headerUnderline, entries } = block;
+  const { headerText, entries, emailGroupName, recipientNamesOnly } = block;
 
   const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
   const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
   const parts = [];
-
-  // Header styling based on toggles
-  const headerStyle =
-    `color:#b30000;` +
-    (headerBold ? ` font-weight:700;` : ``) +
-    (headerUnderline ? ` text-decoration:underline;` : ``);
-
-  parts.push(`<span style="${headerStyle}">${htmlEscape(headerText)}</span><br>`);
+  parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong><br>`);
 
   let prevRenderedType = null;
   let renderedCount = 0;
@@ -480,23 +443,15 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-    // spacing logic (your current version)
+    // break rules: text only breaks if not first item (prevents double break after header)
     if (e.type === 'text') {
-      if (renderedCount > 0) {
-        parts.push('<br>');
-      }
+      if (renderedCount > 0) parts.push('<br>');
     } else {
-      if (renderedCount > 0 && prevRenderedType !== 'text') {
-        parts.push('<br>');
-      }
+      if (renderedCount > 0 && prevRenderedType !== 'text') parts.push('<br>');
     }
 
     if(e.type === 'text'){
-      const textStyle =
-        (e.bold ? 'font-weight:700;' : '') +
-        (e.underline ? 'text-decoration:underline;' : '');
-      const safeText = htmlEscape(e.text).replace(/\n/g,'<br>');
-      parts.push(`<div style="${textStyle}">${safeText}</div>`);
+      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
     }
 
     if(e.type === 'phone'){
@@ -506,17 +461,26 @@ function buildBlockHTML(block, company){
 
     if(e.type === 'email' && idx === firstEmailIndex){
       const emailNamesStr = allEmails.map(r => htmlEscape(r.name)).join(' & ');
+      const emailDisplay = (emailGroupName && allEmails.length >= 2) ? htmlEscape(emailGroupName) : emailNamesStr;
+
       const emailChain = allEmails.map(r => r.email).join(';');
-      const recipientLinks = allEmails
-        .map(r => `<a href="mailto:${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
-        .join(' • ');
+
+      const recipientLinks = recipientNamesOnly
+  ? allEmails
+      .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.name)}</a>`)
+      .join(' • ')
+  : allEmails
+      .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
+      .join(' • ');
+
+
       parts.push(
 `Please click to email 
 <a 
   href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
   style="color:#006400; text-decoration:none; font-weight:bold;"
 >
-  ${emailNamesStr}
+  ${emailDisplay}
 </a>
 <br>
 <small>Recipients: ${recipientLinks}</small>`
@@ -535,7 +499,6 @@ function getTeamBackground(team){
   if(team === 'global') return '#fdf3d0';
   return '#e6f9ec';
 }
-
 function getTeamTitle(team){
   if(team === 'service') return 'Service Team Notes';
   if(team === 'global') return 'Global Service Notes';
@@ -564,19 +527,18 @@ function buildSnippet(opts){
     ? '\n' + inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')
     : '';
 
-  // Trakker-safe one-line style when forcing expand
   const expandStyle = forceExpand
     ? `<style>#noteInformation{max-height:none !important;height:auto !important;overflow:visible !important;}</style>`
     : '';
 
-  return `<!-- -----------------START OF CURRENT NOTE------------------ --!>
+  return `<!-- -----------------START OF CURRENT NOTE------------------ -->
 ${expandStyle}
-  <div style="background-color: ${bgColor}; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
+<div style="background-color: ${bgColor}; padding: 15px; font-family: Arial, sans-serif; line-height: 1.6; color: #222222;">
   <strong style="font-size:16px;">${htmlEscape(teamTitle)}</strong><br>${indentedInner}
   <br>
   ${footer}
 </div>
-<!-- -----------------END OF CURRENT NOTE------------------ --!>`;
+<!-- -----------------END OF CURRENT NOTE------------------ -->`;
 }
 
 function render(){
@@ -585,15 +547,10 @@ function render(){
   const team = getSelectedTeam();
   const forceExpand = document.getElementById('forceExpandNotes').checked;
 
-  const blocks = collectBlocks();
+  updateEmailGroupVisibility();
 
-  const html = buildSnippet({
-    company,
-    blocks,
-    employeeName,
-    team,
-    forceExpand
-  });
+  const blocks = collectBlocks();
+  const html = buildSnippet({ company, blocks, employeeName, team, forceExpand });
 
   document.getElementById('preview').innerHTML = html;
   document.getElementById('htmlOut').textContent = html;
@@ -634,14 +591,11 @@ document.getElementById('copyHtmlBtn').addEventListener('click', ()=>{
     if(statusEl){
       statusEl.textContent = 'Copied to clipboard';
       clearTimeout(window._copyStatusTimeout);
-      window._copyStatusTimeout = setTimeout(()=>{
-        statusEl.textContent = '';
-      }, 2000);
+      window._copyStatusTimeout = setTimeout(()=>{ statusEl.textContent = ''; }, 2000);
     }
   });
 });
 
-// Employee + Company input: lock/unlock headers + re-render
 ['company','employeeName'].forEach(id=>{
   document.getElementById(id).addEventListener('input', () => {
     updateHeaderAvailability();
@@ -649,7 +603,6 @@ document.getElementById('copyHtmlBtn').addEventListener('click', ()=>{
   });
 });
 
-// Team radio change -> update headers + re-render + re-apply locking
 document.querySelectorAll('input[name="teamType"]').forEach(r=>{
   r.addEventListener('change', ()=>{
     updateAllBlockHeaders();
@@ -657,7 +610,6 @@ document.querySelectorAll('input[name="teamType"]').forEach(r=>{
   });
 });
 
-// Force expand checkbox change -> re-render
 document.getElementById('forceExpandNotes').addEventListener('change', render);
 
 // Start with one empty block
