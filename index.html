@@ -55,6 +55,25 @@
   .entry{padding:6px 0;border-bottom:1px dashed #e5e7eb}
   .entry:last-child{border-bottom:0}
 
+  /* Tiny checkbox rows under remove buttons */
+  .format-toggles{
+    margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:flex-start;
+  }
+  .format-toggles label{
+    margin:0;
+    font-weight:600;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:#0f172a;
+  }
+  .format-toggles input{ transform: translateY(1px); }
+
   @media (max-width:880px){ .grid{grid-template-columns:1fr} }
 </style>
 </head>
@@ -63,11 +82,13 @@
 
   <!-- Service Express Logo -->
   <div style="text-align:left; margin-bottom:15px;">
-    <img src="https://serviceexpress.com/wp-content/themes/serviceexpress/dist/svg/logo-main.svg" 
-         alt="Service Express Logo" 
+    <img src="https://serviceexpress.com/wp-content/themes/serviceexpress/dist/svg/logo-main.svg"
+         alt="Service Express Logo"
          style="height:50px;">
   </div>
+
   <h1>Service Notes Generator</h1>
+
   <div class="grid">
     <!-- Form -->
     <div class="card">
@@ -164,10 +185,10 @@ const TEAM_HEADER_PRESETS = {
     {value:'svc_after',   label:'After-hours service only'}
   ],
   global: [
-    {value:'custom',       label:'Custom Header'},
-    {value:'glob_all',     label:'For all global requests'},
-    {value:'glob_business',label:'During normal business hours (Global)'},
-    {value:'glob_after',   label:'After-hours global support'}
+    {value:'custom',        label:'Custom Header'},
+    {value:'glob_all',      label:'For all global requests'},
+    {value:'glob_business', label:'During normal business hours (Global)'},
+    {value:'glob_after',    label:'After-hours global support'}
   ]
 };
 
@@ -192,8 +213,14 @@ function createEntry(type){
           <label>Text</label>
           <textarea class="block-text" placeholder="Custom text..."></textarea>
         </div>
-        <div>
+        <div style="display:flex; flex-direction:column; align-items:flex-start;">
           <button type="button" class="ghost remove-item">Remove</button>
+
+          <!-- NEW: Text formatting toggles (below Remove) -->
+          <div class="format-toggles">
+            <label><input type="checkbox" class="text-bold"> Bold</label>
+            <label><input type="checkbox" class="text-underline"> Underline</label>
+          </div>
         </div>
       </div>`;
   }
@@ -233,6 +260,8 @@ function createEntry(type){
   }
 
   entry.addEventListener('input', render);
+  entry.addEventListener('change', render);
+
   entry.querySelector('.remove-item').addEventListener('click', ()=>{
     entry.remove();
     render();
@@ -268,8 +297,15 @@ function createBlock(){
         <select class="block-header"></select>
         <input type="text" class="block-header-custom" placeholder="Custom header..." style="display:none;margin-top:8px">
       </div>
-      <div style="flex:0">
+
+      <div style="flex:0; display:flex; flex-direction:column; align-items:flex-start;">
         <button type="button" class="ghost remove-block" title="Remove this block">Remove</button>
+
+        <!-- NEW: Header formatting toggles (below Remove) -->
+        <div class="format-toggles">
+          <label><input type="checkbox" class="header-bold" checked> Bold</label>
+          <label><input type="checkbox" class="header-underline"> Underline</label>
+        </div>
       </div>
     </div>
 
@@ -294,6 +330,10 @@ function createBlock(){
     render();
   });
   customInp.addEventListener('input', render);
+
+  // NEW: header style toggles
+  block.querySelector('.header-bold').addEventListener('change', render);
+  block.querySelector('.header-underline').addEventListener('change', render);
 
   block.querySelector('.add-text').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('text'));
@@ -337,14 +377,23 @@ function updateHeaderAvailability() {
   document.querySelectorAll('#blocksContainer .block').forEach(block => {
     const header = block.querySelector('.block-header');
     const custom = block.querySelector('.block-header-custom');
+    const hb = block.querySelector('.header-bold');
+    const hu = block.querySelector('.header-underline');
 
     if (!header || !custom) return;
 
     header.disabled = !enabled;
     custom.disabled = !enabled;
 
+    // NEW: disable header bold/underline while locked
+    if(hb) hb.disabled = !enabled;
+    if(hu) hu.disabled = !enabled;
+
     header.style.opacity = enabled ? 1 : 0.5;
     custom.style.opacity = enabled ? 1 : 0.5;
+
+    if(hb) hb.parentElement.style.opacity = enabled ? 1 : 0.5;
+    if(hu) hu.parentElement.style.opacity = enabled ? 1 : 0.5;
   });
 }
 
@@ -355,6 +404,9 @@ function collectBlocks(){
   return Array.from(document.querySelectorAll('#blocksContainer .block')).map(b=>{
     const headerVal = b.querySelector('.block-header').value;
     const headerCustom = b.querySelector('.block-header-custom').value.trim();
+
+    const headerBold = !!b.querySelector('.header-bold')?.checked;
+    const headerUnderline = !!b.querySelector('.header-underline')?.checked;
 
     let headerText;
     if (headerVal === 'custom') {
@@ -367,10 +419,14 @@ function collectBlocks(){
     // Entries in exact DOM order
     const entries = Array.from(b.querySelectorAll('.block-content .entry')).map(e=>{
       const type = e.dataset.type;
+
       if(type === 'text'){
         const v = (e.querySelector('.block-text')?.value || '').trim();
-        return { type, text: v };
+        const bold = !!e.querySelector('.text-bold')?.checked;
+        const underline = !!e.querySelector('.text-underline')?.checked;
+        return { type, text: v, bold, underline };
       }
+
       if(type === 'phone'){
         return {
           type,
@@ -378,6 +434,7 @@ function collectBlocks(){
           phone: e.querySelector('.contact-phone')?.value.trim() || ''
         };
       }
+
       if(type === 'email'){
         return {
           type,
@@ -385,22 +442,29 @@ function collectBlocks(){
           email: e.querySelector('.recipient-email')?.value.trim() || ''
         };
       }
+
       return { type };
     });
 
-    return { headerText, entries };
+    return { headerText, headerBold, headerUnderline, entries };
   });
 }
 
 function buildBlockHTML(block, company){
-  const { headerText, entries } = block;
+  const { headerText, headerBold, headerUnderline, entries } = block;
 
   const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
   const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
   const parts = [];
 
-  parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong><br>`);
+  // Header styling based on toggles
+  const headerStyle =
+    `color:#b30000;` +
+    (headerBold ? ` font-weight:700;` : ``) +
+    (headerUnderline ? ` text-decoration:underline;` : ``);
+
+  parts.push(`<span style="${headerStyle}">${htmlEscape(headerText)}</span><br>`);
 
   let prevRenderedType = null;
   let renderedCount = 0;
@@ -413,19 +477,23 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-if (e.type === 'text') {
-  if (renderedCount > 0) {
-    parts.push('<br>');
-  }
-}
-else {
-  if (renderedCount > 0 && prevRenderedType !== 'text') {
-    parts.push('<br>');
-  }
-}
+    // spacing logic (your current version)
+    if (e.type === 'text') {
+      if (renderedCount > 0) {
+        parts.push('<br>');
+      }
+    } else {
+      if (renderedCount > 0 && prevRenderedType !== 'text') {
+        parts.push('<br>');
+      }
+    }
 
     if(e.type === 'text'){
-      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
+      const textStyle =
+        (e.bold ? 'font-weight:700;' : '') +
+        (e.underline ? 'text-decoration:underline;' : '');
+      const safeText = htmlEscape(e.text).replace(/\n/g,'<br>');
+      parts.push(`<div style="${textStyle}">${safeText}</div>`);
     }
 
     if(e.type === 'phone'){
