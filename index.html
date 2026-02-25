@@ -10,10 +10,7 @@
     --card:#ffffff;
     --text:#111827;
     --muted:#6b7280;
-    --brand:#0f766e;
-    --accent:#22c55e;
     --danger:#b30000;
-    --successbg:#e6f9ec;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
@@ -40,7 +37,6 @@
   .badge{font-size:12px;border:1px solid #94a3b8;color:#334155;border-radius:999px;padding:2px 8px;background:#f8fafc}
   .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 
-  /* Blocks clearly marked */
   .block{
     border:2px solid #000;
     border-radius:12px;
@@ -51,9 +47,22 @@
   .block .block-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
   .block .block-content{margin-top:10px}
 
-  /* Ordered entries (exactly as added) */
   .entry{padding:6px 0;border-bottom:1px dashed #e5e7eb}
   .entry:last-child{border-bottom:0}
+
+  .mini-checks{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:8px;
+  }
+  .mini-checks label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin:0;
+    font-weight:400;
+  }
 
   @media (max-width:880px){ .grid{grid-template-columns:1fr} }
 </style>
@@ -61,7 +70,6 @@
 <body>
 <div class="wrap">
 
-  <!-- Service Express Logo -->
   <div style="text-align:left; margin-bottom:15px;">
     <img src="https://serviceexpress.com/wp-content/themes/serviceexpress/dist/svg/logo-main.svg"
          alt="Service Express Logo"
@@ -75,14 +83,12 @@
   <div style="height:16px;"></div>
 
   <div class="grid">
-    <!-- Form -->
     <div class="card">
       <div class="section-title">
         <strong>Select Team</strong>
         <span class="badge" id="modeBadge">Blocks: 0</span>
       </div>
 
-      <!-- Team selector radios -->
       <div class="row" style="margin-bottom:8px;">
         <label style="font-weight:600;margin:0;">Team:</label>
         <label style="display:inline-flex;align-items:center;gap:4px;margin:0;">
@@ -99,7 +105,6 @@
         </label>
       </div>
 
-      <!-- Employee Name -->
       <div class="row" style="justify-content:flex-end; width:100%;">
         <div style="max-width:320px; width:100%;">
           <label for="employeeName">Employee Name <span style="color:#b30000;font-size:12px;">*required</span></label>
@@ -110,13 +115,11 @@
       <label for="company">Customer's Company Name <span style="color:#b30000;font-size:12px;">*required</span></label>
       <input type="text" id="company" placeholder="Example: Acme Corp (required for email subject)">
 
-      <!-- Dynamic Blocks -->
       <div class="actions" style="margin-top:6px">
         <button type="button" class="ghost" id="addBlockBtn">+ Add Block</button>
       </div>
       <div id="blocksContainer"></div>
 
-      <!-- Force expand toggle -->
       <div class="actions" style="margin-top:6px">
         <label style="display:inline-flex;align-items:center;gap:6px;margin:0;">
           <input type="checkbox" id="forceExpandNotes">
@@ -132,7 +135,6 @@
       <p class="muted">Tip: The preview updates automatically as you type. Use "Copy HTML" to copy the raw snippet.</p>
     </div>
 
-    <!-- Output -->
     <div class="card">
       <div class="section-title">
         <strong>Live Preview</strong>
@@ -154,7 +156,6 @@
 function htmlEscape(s){return (s||'').replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
 function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
 
-// Team-specific header presets (Custom Header always first)
 const TEAM_HEADER_PRESETS = {
   monitoring: [
     {value:'custom',   label:'Custom Header'},
@@ -197,8 +198,12 @@ function createEntry(type){
           <label>Text</label>
           <textarea class="block-text" placeholder="Custom text..."></textarea>
         </div>
-        <div>
+        <div style="min-width:140px">
           <button type="button" class="ghost remove-item">Remove</button>
+          <div class="mini-checks">
+            <label><input type="checkbox" class="text-bold"> <span class="muted">Bold</span></label>
+            <label><input type="checkbox" class="text-underline"> <span class="muted">Underline</span></label>
+          </div>
         </div>
       </div>`;
   }
@@ -238,6 +243,8 @@ function createEntry(type){
   }
 
   entry.addEventListener('input', render);
+  entry.addEventListener('change', render);
+
   entry.querySelector('.remove-item').addEventListener('click', ()=>{
     entry.remove();
     render();
@@ -266,14 +273,18 @@ function createBlock(){
   const block = document.createElement('div');
   block.className = 'block';
   block.innerHTML = `
-    <div class="row">
+    <div class="row" style="align-items:flex-start;">
       <div style="flex:1;min-width:220px">
         <label>Block Header</label>
         <select class="block-header"></select>
         <input type="text" class="block-header-custom" placeholder="Custom header..." style="display:none;margin-top:8px">
       </div>
-      <div style="flex:0">
+      <div style="flex:0;min-width:160px;">
         <button type="button" class="ghost remove-block" title="Remove this block">Remove</button>
+        <div class="mini-checks">
+          <label><input type="checkbox" class="header-bold" checked> <span class="muted">Bold</span></label>
+          <label><input type="checkbox" class="header-underline"> <span class="muted">Underline</span></label>
+        </div>
       </div>
     </div>
 
@@ -283,7 +294,6 @@ function createBlock(){
       <button type="button" class="ghost add-email">+ Add email recipient</button>
     </div>
 
-    <!-- Email Group Name (shows only when 2+ email entries exist in this block) -->
     <div class="email-group-row" style="display:none; margin-top:10px;">
       <label style="margin-top:0;">Email Group Name <span class="muted" style="font-weight:400;">(optional)</span></label>
       <input type="text" class="email-group-name" placeholder="Example: IT Group">
@@ -299,10 +309,10 @@ function createBlock(){
     <div class="block-content"></div>
   `;
 
+  populateHeadersForBlock(block);
+
   const headerSel = block.querySelector('.block-header');
   const customInp = block.querySelector('.block-header-custom');
-
-  populateHeadersForBlock(block);
 
   headerSel.addEventListener('change', e=>{
     customInp.style.display = (e.target.value === 'custom') ? 'block' : 'none';
@@ -310,7 +320,11 @@ function createBlock(){
   });
   customInp.addEventListener('input', render);
 
-  // ✅ Correct place for these listeners
+  // header style toggles
+  block.querySelector('.header-bold').addEventListener('change', render);
+  block.querySelector('.header-underline').addEventListener('change', render);
+
+  // email group inputs
   const groupNameInput = block.querySelector('.email-group-name');
   const namesOnlyCheckbox = block.querySelector('.recipient-names-only');
   if(groupNameInput) groupNameInput.addEventListener('input', render);
@@ -320,12 +334,10 @@ function createBlock(){
     block.querySelector('.block-content').appendChild(createEntry('text'));
     render();
   });
-
   block.querySelector('.add-phone').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('phone'));
     render();
   });
-
   block.querySelector('.add-email').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('email'));
     render();
@@ -348,7 +360,6 @@ function updateAllBlockHeaders(){
   render();
 }
 
-// lock/unlock headers until Employee Name + Company filled
 function updateHeaderAvailability() {
   const employee = document.getElementById('employeeName').value.trim();
   const company = document.getElementById('company').value.trim();
@@ -367,7 +378,6 @@ function updateHeaderAvailability() {
   });
 }
 
-/* show Email Group Name only if block has 2+ email entries */
 function updateEmailGroupVisibility(){
   document.querySelectorAll('#blocksContainer .block').forEach(block=>{
     const emailEntries = block.querySelectorAll('.block-content .entry[data-type="email"]');
@@ -393,15 +403,22 @@ function collectBlocks(){
       headerText = preset ? preset.label : 'Block';
     }
 
+    const headerBold = b.querySelector('.header-bold')?.checked || false;
+    const headerUnderline = b.querySelector('.header-underline')?.checked || false;
+
     const emailGroupName = (b.querySelector('.email-group-name')?.value || '').trim();
     const recipientNamesOnly = b.querySelector('.recipient-names-only')?.checked || false;
 
     const entries = Array.from(b.querySelectorAll('.block-content .entry')).map(e=>{
       const type = e.dataset.type;
+
       if(type === 'text'){
         const v = (e.querySelector('.block-text')?.value || '').trim();
-        return { type, text: v };
+        const bold = e.querySelector('.text-bold')?.checked || false;
+        const underline = e.querySelector('.text-underline')?.checked || false;
+        return { type, text: v, bold, underline };
       }
+
       if(type === 'phone'){
         return {
           type,
@@ -409,6 +426,7 @@ function collectBlocks(){
           phone: e.querySelector('.contact-phone')?.value.trim() || ''
         };
       }
+
       if(type === 'email'){
         return {
           type,
@@ -416,21 +434,31 @@ function collectBlocks(){
           email: e.querySelector('.recipient-email')?.value.trim() || ''
         };
       }
+
       return { type };
     });
 
-    return { headerText, entries, emailGroupName, recipientNamesOnly };
+    return { headerText, headerBold, headerUnderline, entries, emailGroupName, recipientNamesOnly };
   });
 }
 
+function styleBits({bold, underline}){
+  let s = '';
+  if(bold) s += 'font-weight:700;';
+  if(underline) s += 'text-decoration:underline;';
+  return s;
+}
+
 function buildBlockHTML(block, company){
-  const { headerText, entries, emailGroupName, recipientNamesOnly } = block;
+  const { headerText, headerBold, headerUnderline, entries, emailGroupName, recipientNamesOnly } = block;
 
   const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
   const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
 
   const parts = [];
-  parts.push(`<strong style="color:#b30000;">${htmlEscape(headerText)}</strong><br>`);
+
+  const headerStyle = `color:#b30000;${styleBits({bold:headerBold, underline:headerUnderline})}`;
+  parts.push(`<span style="${headerStyle}">${htmlEscape(headerText)}</span><br>`);
 
   let prevRenderedType = null;
   let renderedCount = 0;
@@ -443,7 +471,6 @@ function buildBlockHTML(block, company){
 
     if(!willRender) return;
 
-    // break rules: text only breaks if not first item (prevents double break after header)
     if (e.type === 'text') {
       if (renderedCount > 0) parts.push('<br>');
     } else {
@@ -451,7 +478,8 @@ function buildBlockHTML(block, company){
     }
 
     if(e.type === 'text'){
-      parts.push(`<div>${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
+      const tStyle = styleBits({bold:!!e.bold, underline:!!e.underline});
+      parts.push(`<div style="${tStyle}">${htmlEscape(e.text).replace(/\n/g,'<br>')}</div>`);
     }
 
     if(e.type === 'phone'){
@@ -465,14 +493,14 @@ function buildBlockHTML(block, company){
 
       const emailChain = allEmails.map(r => r.email).join(';');
 
+      // ✅ names-only STILL uses mailto links (hover shows email via title)
       const recipientLinks = recipientNamesOnly
-  ? allEmails
-      .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.name)}</a>`)
-      .join(' • ')
-  : allEmails
-      .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
-      .join(' • ');
-
+        ? allEmails
+            .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.name)}</a>`)
+            .join(' • ')
+        : allEmails
+            .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
+            .join(' • ');
 
       parts.push(
 `Please click to email 
@@ -612,7 +640,6 @@ document.querySelectorAll('input[name="teamType"]').forEach(r=>{
 
 document.getElementById('forceExpandNotes').addEventListener('change', render);
 
-// Start with one empty block
 (function init(){
   const container = document.getElementById('blocksContainer');
   const block = createBlock();
