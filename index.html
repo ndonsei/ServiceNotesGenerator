@@ -13,28 +13,82 @@
     --danger:#b30000;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
-  .wrap{max-width: 1440px; margin: 40px auto; padding: 0 16px;}
-  h1{font-size: 22px;margin:0 0 16px}
-  .grid{display:grid;grid-template-columns:minmax(0, 5fr) minmax(0, 3fr);gap:16px}
-  .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.06);padding:16px;min-width:0;}
+  body{
+    margin:0;
+    background:var(--bg);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    color:var(--text)
+  }
+  .wrap{max-width:1440px;margin:40px auto;padding:0 16px;}
+  h1{font-size:22px;margin:0}
+  .grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,3fr);gap:16px}
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,.06);
+    padding:16px;
+    min-width:0;
+  }
   label{display:block;font-weight:600;margin:10px 0 6px}
   input[type="text"], input[type="tel"], textarea, select{
-    width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:14px;background:#fff;
+    width:100%;
+    padding:10px 12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    font-size:14px;
+    background:#fff;
+  }
+  input[type="radio"], input[type="checkbox"]{
+    width:auto;
+    margin:0;
   }
   textarea{min-height:70px;resize:vertical}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   .muted{color:var(--muted);font-size:12px}
   .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;align-items:center}
   button{
-    border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer;
+    border:0;
+    border-radius:12px;
+    padding:10px 14px;
+    font-weight:700;
+    cursor:pointer;
     box-shadow:0 4px 12px rgba(0,0,0,.08)
   }
   .ghost{background:#eef2f7;color:#0f172a}
-  .preview{min-height:140px;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:14px;overflow:auto}
-  .note{background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;font-size:13px;color:#7c2d12}
-  .template{background:#111827;color:#e5e7eb;border-radius:12px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;white-space:pre;overflow:auto}
-  .badge{font-size:12px;border:1px solid #94a3b8;color:#334155;border-radius:999px;padding:2px 8px;background:#f8fafc}
+  .preview{
+    min-height:140px;
+    background:#fff;
+    border:1px dashed #cbd5e1;
+    border-radius:12px;
+    padding:14px;
+    overflow:auto
+  }
+  .note{
+    background:#fff7ed;
+    border:1px solid #fed7aa;
+    border-radius:12px;
+    padding:10px;
+    font-size:13px;
+    color:#7c2d12
+  }
+  .template{
+    background:#111827;
+    color:#e5e7eb;
+    border-radius:12px;
+    padding:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    font-size:12px;
+    white-space:pre;
+    overflow:auto
+  }
+  .badge{
+    font-size:12px;
+    border:1px solid #94a3b8;
+    color:#334155;
+    border-radius:999px;
+    padding:2px 8px;
+    background:#f8fafc
+  }
   .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 
   .block{
@@ -64,7 +118,9 @@
     font-weight:400;
   }
 
-  @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+  @media (max-width:880px){
+    .grid{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
@@ -76,10 +132,11 @@
          style="height:50px;">
   </div>
 
-  <div style="display:flex;align-items:baseline;gap:10px;">
-    <h1 style="margin:0;">Service Notes Generator</h1>
+  <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+    <h1>Service Notes Generator</h1>
     <span class="muted" style="font-size:12px;">by Nick Donegon</span>
   </div>
+
   <div style="height:16px;"></div>
 
   <div class="grid">
@@ -153,8 +210,21 @@
 </div>
 
 <script>
-function htmlEscape(s){return (s||'').replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));}
-function urlEncode(s){return encodeURIComponent(s).replace(/%20/g,"%20");}
+function htmlEscape(s){
+  return (s || '').replace(/[&<>"']/g, m => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[m]));
+}
+
+function urlEncode(s){
+  return encodeURIComponent(s).replace(/%20/g,"%20");
+}
+
+let emailEntryCounter = 0;
 
 const TEAM_HEADER_PRESETS = {
   monitoring: [
@@ -182,8 +252,16 @@ function getSelectedTeam(){
   const el = document.querySelector('input[name="teamType"]:checked');
   return el ? el.value : 'monitoring';
 }
+
 function getTeamHeaderPresets(team){
   return TEAM_HEADER_PRESETS[team] || TEAM_HEADER_PRESETS.monitoring;
+}
+
+function styleBits({bold, underline}){
+  let s = '';
+  if (bold) s += 'font-weight:700;';
+  if (underline) s += 'text-decoration:underline;';
+  return s;
 }
 
 function createEntry(type){
@@ -226,8 +304,9 @@ function createEntry(type){
   }
 
   if(type === 'email'){
+    const roleGroup = `email_role_${++emailEntryCounter}`;
     entry.innerHTML = `
-      <div class="row">
+      <div class="row" style="align-items:flex-start;">
         <div style="flex:1">
           <label>Name</label>
           <input type="text" class="recipient-name" placeholder="Recipient name (display)">
@@ -236,8 +315,18 @@ function createEntry(type){
           <label>Email</label>
           <input type="text" class="recipient-email" placeholder="name@example.com">
         </div>
-        <div>
+        <div style="min-width:140px">
           <button type="button" class="ghost remove-item">Remove</button>
+          <div class="mini-checks email-role-wrap" style="display:none;">
+            <label>
+              <input type="radio" name="${roleGroup}" class="email-role-to" checked>
+              <span class="muted">TO</span>
+            </label>
+            <label>
+              <input type="radio" name="${roleGroup}" class="email-role-cc">
+              <span class="muted">CC</span>
+            </label>
+          </div>
         </div>
       </div>`;
   }
@@ -263,7 +352,7 @@ function populateHeadersForBlock(block, keepPrev){
   select.innerHTML = presets.map(h=>`<option value="${h.value}">${h.label}</option>`).join('');
 
   let selectedVal = 'custom';
-  if (presets.some(h=>h.value === prevVal)) selectedVal = prevVal;
+  if (presets.some(h => h.value === prevVal)) selectedVal = prevVal;
 
   select.value = selectedVal;
   customInp.style.display = (select.value === 'custom') ? 'block' : 'none';
@@ -320,24 +409,24 @@ function createBlock(){
   });
   customInp.addEventListener('input', render);
 
-  // header style toggles
   block.querySelector('.header-bold').addEventListener('change', render);
   block.querySelector('.header-underline').addEventListener('change', render);
 
-  // email group inputs
   const groupNameInput = block.querySelector('.email-group-name');
   const namesOnlyCheckbox = block.querySelector('.recipient-names-only');
-  if(groupNameInput) groupNameInput.addEventListener('input', render);
-  if(namesOnlyCheckbox) namesOnlyCheckbox.addEventListener('change', render);
+  if (groupNameInput) groupNameInput.addEventListener('input', render);
+  if (namesOnlyCheckbox) namesOnlyCheckbox.addEventListener('change', render);
 
   block.querySelector('.add-text').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('text'));
     render();
   });
+
   block.querySelector('.add-phone').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('phone'));
     render();
   });
+
   block.querySelector('.add-email').addEventListener('click', ()=>{
     block.querySelector('.block-content').appendChild(createEntry('email'));
     render();
@@ -378,12 +467,27 @@ function updateHeaderAvailability() {
   });
 }
 
-function updateEmailGroupVisibility(){
+function updateEmailOptionsVisibility(){
   document.querySelectorAll('#blocksContainer .block').forEach(block=>{
-    const emailEntries = block.querySelectorAll('.block-content .entry[data-type="email"]');
-    const row = block.querySelector('.email-group-row');
-    if(!row) return;
-    row.style.display = (emailEntries.length >= 2) ? 'block' : 'none';
+    const emailEntries = Array.from(block.querySelectorAll('.block-content .entry[data-type="email"]'));
+
+    emailEntries.forEach((entry, idx)=>{
+      const roleWrap = entry.querySelector('.email-role-wrap');
+      const toRadio = entry.querySelector('.email-role-to');
+      if(!roleWrap) return;
+
+      if(idx === 0){
+        roleWrap.style.display = 'none';
+        if(toRadio) toRadio.checked = true;
+      } else {
+        roleWrap.style.display = 'flex';
+      }
+    });
+
+    const groupRow = block.querySelector('.email-group-row');
+    if(groupRow){
+      groupRow.style.display = (emailEntries.length >= 2) ? 'block' : 'none';
+    }
   });
 }
 
@@ -431,29 +535,33 @@ function collectBlocks(){
         return {
           type,
           name: e.querySelector('.recipient-name')?.value.trim() || '',
-          email: e.querySelector('.recipient-email')?.value.trim() || ''
+          email: e.querySelector('.recipient-email')?.value.trim() || '',
+          role: e.querySelector('.email-role-cc')?.checked ? 'cc' : 'to'
         };
       }
 
       return { type };
     });
 
-    return { headerText, headerBold, headerUnderline, entries, emailGroupName, recipientNamesOnly };
+    return {
+      headerText,
+      headerBold,
+      headerUnderline,
+      entries,
+      emailGroupName,
+      recipientNamesOnly
+    };
   });
 }
 
-function styleBits({bold, underline}){
-  let s = '';
-  if(bold) s += 'font-weight:700;';
-  if(underline) s += 'text-decoration:underline;';
-  return s;
-}
-
 function buildBlockHTML(block, company){
-  const { headerText, headerBold, headerUnderline, entries, emailGroupName, recipientNamesOnly } = block;
+  const {
+    headerText, headerBold, headerUnderline,
+    entries, emailGroupName, recipientNamesOnly
+  } = block;
 
-  const allEmails = entries.filter(e => e.type==='email' && e.name && e.email);
-  const firstEmailIndex = entries.findIndex(e => e.type==='email' && e.name && e.email);
+  const allEmails = entries.filter(e => e.type === 'email' && e.name && e.email);
+  const firstEmailIndex = entries.findIndex(e => e.type === 'email' && e.name && e.email);
 
   const parts = [];
 
@@ -465,9 +573,9 @@ function buildBlockHTML(block, company){
 
   entries.forEach((e, idx) => {
     const willRender =
-      (e.type==='text' && e.text) ||
-      (e.type==='phone' && e.name && e.phone) ||
-      (e.type==='email' && allEmails.length && idx === firstEmailIndex);
+      (e.type === 'text' && e.text) ||
+      (e.type === 'phone' && e.name && e.phone) ||
+      (e.type === 'email' && allEmails.length && idx === firstEmailIndex);
 
     if(!willRender) return;
 
@@ -491,21 +599,40 @@ function buildBlockHTML(block, company){
       const emailNamesStr = allEmails.map(r => htmlEscape(r.name)).join(' & ');
       const emailDisplay = (emailGroupName && allEmails.length >= 2) ? htmlEscape(emailGroupName) : emailNamesStr;
 
-      const emailChain = allEmails.map(r => r.email).join(';');
+      const toEmails = allEmails
+        .filter((r, i) => i === 0 || r.role !== 'cc')
+        .map(r => r.email);
 
-      // ✅ names-only STILL uses mailto links (hover shows email via title)
+      const ccEmails = allEmails
+        .filter((r, i) => i > 0 && r.role === 'cc')
+        .map(r => r.email);
+
+      const toChain = toEmails.join(';');
+      const ccChain = ccEmails.join(';');
+
+      const href =
+        `mailto:${htmlEscape(toChain)}` +
+        `?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}` +
+        (ccChain ? `&cc=${urlEncode(ccChain)}` : '');
+
       const recipientLinks = recipientNamesOnly
         ? allEmails
-            .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.name)}</a>`)
+            .map(r => {
+              const label = htmlEscape(r.name) + (r.role === 'cc' ? ' (CC)' : '');
+              return `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${label}</a>`;
+            })
             .join(' • ')
         : allEmails
-            .map(r => `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${htmlEscape(r.email)}</a>`)
+            .map(r => {
+              const label = htmlEscape(r.email) + (r.role === 'cc' ? ' (CC)' : '');
+              return `<a href="mailto:${htmlEscape(r.email)}" title="${htmlEscape(r.email)}" style="color:#006400; text-decoration:none;">${label}</a>`;
+            })
             .join(' • ');
 
       parts.push(
 `Please click to email 
 <a 
-  href="mailto:${htmlEscape(emailChain)}?subject=${urlEncode('Service Express | ' + company + ' | Service Ticket')}" 
+  href="${href}" 
   style="color:#006400; text-decoration:none; font-weight:bold;"
 >
   ${emailDisplay}
@@ -527,6 +654,7 @@ function getTeamBackground(team){
   if(team === 'global') return '#fdf3d0';
   return '#e6f9ec';
 }
+
 function getTeamTitle(team){
   if(team === 'service') return 'Service Team Notes';
   if(team === 'global') return 'Global Service Notes';
@@ -552,7 +680,7 @@ function buildSnippet(opts){
   const bgColor = getTeamBackground(team);
   const teamTitle = getTeamTitle(team);
   const indentedInner = inner
-    ? '\n' + inner.split('\n').map(l=>l.length?('  '+l):l).join('\n')
+    ? '\n' + inner.split('\n').map(l => l.length ? ('  ' + l) : l).join('\n')
     : '';
 
   const expandStyle = forceExpand
@@ -575,7 +703,7 @@ function render(){
   const team = getSelectedTeam();
   const forceExpand = document.getElementById('forceExpandNotes').checked;
 
-  updateEmailGroupVisibility();
+  updateEmailOptionsVisibility();
 
   const blocks = collectBlocks();
   const html = buildSnippet({ company, blocks, employeeName, team, forceExpand });
@@ -583,14 +711,14 @@ function render(){
   document.getElementById('preview').innerHTML = html;
   document.getElementById('htmlOut').textContent = html;
 
-  document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length===1?'':'s'}`;
+  document.getElementById('blockCountBadge').textContent = `${blocks.length} block${blocks.length === 1 ? '' : 's'}`;
   document.getElementById('modeBadge').textContent = `Blocks: ${blocks.length}`;
 }
 
 function copyText(text){
   if(navigator.clipboard && window.isSecureContext){
     return navigator.clipboard.writeText(text);
-  }else{
+  } else {
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -598,7 +726,7 @@ function copyText(text){
     document.body.appendChild(ta);
     ta.focus();
     ta.select();
-    try{ document.execCommand('copy'); }catch(e){}
+    try { document.execCommand('copy'); } catch(e){}
     document.body.removeChild(ta);
     return Promise.resolve();
   }
@@ -625,7 +753,7 @@ document.getElementById('copyHtmlBtn').addEventListener('click', ()=>{
 });
 
 ['company','employeeName'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', () => {
+  document.getElementById(id).addEventListener('input', ()=>{
     updateHeaderAvailability();
     render();
   });
